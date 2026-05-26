@@ -8,11 +8,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
-
-// TODO: removed `template`
-// TODO: removed `owner`
-// TODO: removed `recommended_directives`
 
 func resourceAbpCondition() *schema.Resource {
 	return &schema.Resource{
@@ -36,21 +33,22 @@ func resourceAbpCondition() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"account_id": {
-				Description: "ABP account UUID this Condition belongs to.",
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
+				Description:  "ABP account UUID this Condition belongs to.",
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
+				ValidateFunc: validation.IsUUID,
 			},
 			"name": {
-				Description: "Human-readable name of the condition. 1..100 characters.",
-				Type:        schema.TypeString,
-				Required:    true,
+				Description:  "Human-readable name of the condition. 1..100 characters.",
+				Type:         schema.TypeString,
+				Required:     true,
+				ValidateFunc: validation.StringLenBetween(1, 100),
 			},
-			// TODO: map missing description to an empty string
 			"description": {
 				Description: "Description of the condition. Required by the API; empty string is allowed.",
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 			},
 			"code": {
 				Description: "MOI expression evaluated against the request. The server stores a " +
@@ -64,12 +62,6 @@ func resourceAbpCondition() *schema.Resource {
 					"diagnostics and for seeding `.tf` after `terraform import`.",
 				Type:     schema.TypeString,
 				Computed: true,
-			},
-			"is_managed_condition": {
-				// TODO: better description
-				Description: "Tells if the condition is managed by Imperva",
-				Type:        schema.TypeBool,
-				Computed:    true,
 			},
 			"last_change_by": {
 				Description: "Identifier of the user who last changed this condition.",
@@ -116,9 +108,6 @@ func serializeAbpCondition(data *schema.ResourceData, condition *AbpCondition) e
 		if err := data.Set("account_id", condition.AccountId); err != nil {
 			return err
 		}
-	}
-	if err := data.Set("is_managed_condition", condition.Owner == "imperva"); err != nil {
-		return err
 	}
 	if condition.LastChangeBy != nil {
 		if err := data.Set("last_change_by", *condition.LastChangeBy); err != nil {
