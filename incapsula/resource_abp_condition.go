@@ -25,9 +25,14 @@ func resourceAbpCondition() *schema.Resource {
 			StateContext: resourceAbpConditionImport,
 		},
 
-		Description: "Provides an ABP Condition resource. " +
-			"A condition contains MOI expression evaluated against incoming requests. " +
-			"Conditions are referenced from policies (directly or via condition lists) to drive directive actions.",
+		Description: `Provides an ABP Condition resource. A condition contains MOI expression
+			evaluated against incoming requests. Conditions are referenced from policies
+			(directly or via condition lists) to drive directive actions.
+			NOTE: API stores and returns formatted and optimized condition code, so the provider
+			uses "code" as a source of truth only during condition creation, and then updates
+			the condition only when "code" is changed in the terraform. If the code is changed
+			outside of terraform (via UI) the condition won't be recreated. Also, it is recommended
+			to copy "code_normalized" to "code" after running "terraform import".`,
 
 		Schema: map[string]*schema.Schema{
 			"account_id": {
@@ -48,9 +53,17 @@ func resourceAbpCondition() *schema.Resource {
 				Required:    true,
 			},
 			"code": {
-				Description: "MOI expression evaluated against the request.",
-				Type:        schema.TypeString,
-				Required:    true,
+				Description: "MOI expression evaluated against the request. The server stores a " +
+					"normalized form internally; see `code_normalized` for the server's view. " +
+					"Out-of-band edits to this field (via the UI or API) will not be detected as drift.",
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"code_normalized": {
+				Description: "Server-side normalized/optimized form of `code`. Useful for " +
+					"diagnostics and for seeding `.tf` after `terraform import`.",
+				Type:     schema.TypeString,
+				Computed: true,
 			},
 			"is_managed_condition": {
 				// TODO: better description
@@ -93,7 +106,9 @@ func serializeAbpCondition(data *schema.ResourceData, condition *AbpCondition) e
 	if err := data.Set("description", condition.Description); err != nil {
 		return err
 	}
-	if err := data.Set("code", condition.Code); err != nil {
+	// Intentionally do not overwrite "code": the server stores a normalized form
+	// that would otherwise show as perpetual drift. Expose it via "code_normalized".
+	if err := data.Set("code_normalized", condition.Code); err != nil {
 		return err
 	}
 	// TODO: Remove empty string check
@@ -164,6 +179,13 @@ func resourceAbpConditionRead(ctx context.Context, data *schema.ResourceData, m 
 
 	if err := serializeAbpCondition(data, condition); err != nil {
 		return diag.FromErr(err)
+	}
+	// On import there is no prior state for "code"; seed it from the server's
+	// normalized value so the user has something to copy into their .tf.
+	if data.Get("code").(string) == "" {
+		if err := data.Set("code", condition.Code); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	return nil
 }

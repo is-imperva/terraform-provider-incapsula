@@ -17,7 +17,6 @@ type AbpCondition struct {
 	Name         string  `json:"name"`
 	Description  string  `json:"description"`
 	Code         string  `json:"code"`
-	Template     *string `json:"template,omitempty"`
 	LastChangeBy *string `json:"last_change_by,omitempty"`
 	CreatedAt    *string `json:"created_at,omitempty"`
 	ModifiedAt   *string `json:"modified_at,omitempty"`
