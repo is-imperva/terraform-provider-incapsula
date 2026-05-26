@@ -156,11 +156,12 @@ func resourceAbpConditionRead(ctx context.Context, data *schema.ResourceData, m 
 		return nil
 	}
 
-	condition, status, err := client.ReadAbpCondition(id)
+	condition, err := client.ReadAbpCondition(id)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	if status == 404 || condition == nil {
+
+	if condition == nil {
 		log.Printf("[INFO] ABP Condition %s not found, removing from state", id)
 		data.SetId("")
 		return nil
@@ -169,6 +170,7 @@ func resourceAbpConditionRead(ctx context.Context, data *schema.ResourceData, m 
 	if err := serializeAbpCondition(data, condition); err != nil {
 		return diag.FromErr(err)
 	}
+
 	// On import there is no prior state for "code"; seed it from the server's
 	// normalized value so the user has something to copy into their .tf.
 	if data.Get("code").(string) == "" {

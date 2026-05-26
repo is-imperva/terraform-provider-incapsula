@@ -62,33 +62,34 @@ func (c *Client) CreateAbpCondition(accountId string, condition AbpCondition) (*
 	return &created, nil
 }
 
-func (c *Client) ReadAbpCondition(conditionId string) (*AbpCondition, int, error) {
+func (c *Client) ReadAbpCondition(conditionId string) (*AbpCondition, error) {
 	log.Printf("[INFO] Reading %s with id %s", abpConditionResourceName, conditionId)
 
 	resp, err := c.DoJsonRequestWithHeaders(http.MethodGet, c.abpConditionUrl(conditionId), nil, ReadAbpCondition)
 	if err != nil {
-		return nil, 0, fmt.Errorf("error reading %s %s: %w", abpConditionResourceName, conditionId, err)
+		return nil, fmt.Errorf("error reading %s %s: %w", abpConditionResourceName, conditionId, err)
 	}
 	defer resp.Body.Close()
 
-	responseBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, resp.StatusCode, fmt.Errorf("error reading response body when reading %s: %w", abpConditionResourceName, err)
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil
 	}
 
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, resp.StatusCode, nil
-	}
 	// TODO: do not return status code
 	if resp.StatusCode != http.StatusOK {
-		return nil, resp.StatusCode, fmt.Errorf("error status code %d when reading %s %s: %s", resp.StatusCode, abpConditionResourceName, conditionId, string(responseBody))
+		return nil, fmt.Errorf("error status code %d when reading %s %s", resp.StatusCode, abpConditionResourceName, conditionId)
+	}
+
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body when reading %s: %w", abpConditionResourceName, err)
 	}
 
 	var condition AbpCondition
 	if err := json.Unmarshal(responseBody, &condition); err != nil {
-		return nil, resp.StatusCode, fmt.Errorf("error parsing %s read response: %w; body: %s", abpConditionResourceName, err, string(responseBody))
+		return nil, fmt.Errorf("error parsing %s read response: %w; body: %s", abpConditionResourceName, err, string(responseBody))
 	}
-	return &condition, resp.StatusCode, nil
+	return &condition, nil
 }
 
 func (c *Client) UpdateAbpCondition(conditionId string, condition AbpCondition) (*AbpCondition, error) {
