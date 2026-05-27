@@ -23,13 +23,13 @@ func resourceAbpCondition() *schema.Resource {
 		},
 
 		Description: `Provides an ABP Condition resource. A condition contains MOI expression
-			evaluated against incoming requests. Conditions are referenced from policies
-			(directly or via condition lists) to drive directive actions.
-			NOTE: API stores and returns formatted and optimized condition code, so the provider
-			uses "code" as a source of truth only during condition creation, and then updates
-			the condition only when "code" is changed in the terraform. If the code is changed
-			outside of terraform (via UI) the condition won't be recreated. Also, it is recommended
-			to copy "code_normalized" to "code" after running "terraform import".`,
+evaluated against incoming requests. Conditions are referenced from policies
+(directly or via condition lists) to drive directive actions.
+NOTE: API stores and returns formatted and optimized condition code, so the provider
+uses "code" as a source of truth only during condition creation, and then updates
+the condition only when "code" is changed in the terraform. If the code is changed
+outside of terraform (via UI) the condition won't be recreated. Also, it is recommended
+to copy "code_normalized" to "code" after running "terraform import".`,
 
 		Schema: map[string]*schema.Schema{
 			"account_id": {
@@ -54,8 +54,9 @@ func resourceAbpCondition() *schema.Resource {
 				Description: "MOI expression evaluated against the request. The server stores a " +
 					"normalized form internally; see `code_normalized` for the server's view. " +
 					"Out-of-band edits to this field (via the UI or API) will not be detected as drift.",
-				Type:     schema.TypeString,
-				Required: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				ValidateFunc: validation.StringIsNotEmpty,
 			},
 			"code_normalized": {
 				Description: "Server-side normalized/optimized form of `code`. Useful for " +
@@ -95,36 +96,49 @@ func serializeAbpCondition(data *schema.ResourceData, condition *AbpCondition) e
 	if err := data.Set("name", condition.Name); err != nil {
 		return err
 	}
+
 	if err := data.Set("description", condition.Description); err != nil {
 		return err
 	}
+
 	// Intentionally do not overwrite "code": the server stores a normalized form
 	// that would otherwise show as perpetual drift. Expose it via "code_normalized".
 	if err := data.Set("code_normalized", condition.Code); err != nil {
 		return err
 	}
-	if err := data.Set("account_id", condition.AccountId); err != nil {
+
+	// AccountId might be empty (i.e. for managed conditions), don't overwrite the state value
+	// in this case, otherwise Terraform will treat it as deleted
+	if condition.AccountId != "" {
+		if err := data.Set("account_id", condition.AccountId); err != nil {
+			return err
+		}
+	}
+
+	var lastChangeBy string
+	if condition.LastChangeBy != nil {
+		lastChangeBy = *condition.LastChangeBy
+	}
+	if err := data.Set("last_change_by", lastChangeBy); err != nil {
 		return err
 	}
-	if condition.LastChangeBy != nil {
-		if err := data.Set("last_change_by", *condition.LastChangeBy); err != nil {
-			return err
-		}
-	} else {
-		if err := data.Set("last_change_by", ""); err != nil {
-			return err
-		}
-	}
+
+	var createdAt string
 	if condition.CreatedAt != nil {
-		if err := data.Set("created_at", *condition.CreatedAt); err != nil {
-			return err
-		}
+		createdAt = *condition.CreatedAt
 	}
+	if err := data.Set("created_at", createdAt); err != nil {
+		return err
+	}
+
+	var modifiedAt string
 	if condition.ModifiedAt != nil {
-		if err := data.Set("modified_at", *condition.ModifiedAt); err != nil {
-			return err
-		}
+		modifiedAt = *condition.ModifiedAt
 	}
+	if err := data.Set("modified_at", modifiedAt); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -135,6 +149,9 @@ func resourceAbpConditionCreate(ctx context.Context, data *schema.ResourceData, 
 	created, err := client.CreateAbpCondition(accountId, extractAbpCondition(data))
 	if err != nil {
 		return diag.FromErr(err)
+	}
+	if created.Id == "" {
+		return diag.Errorf("ABP Condition create response did not contain an id")
 	}
 
 	data.SetId(created.Id)
@@ -205,27 +222,12 @@ func resourceAbpConditionDelete(ctx context.Context, data *schema.ResourceData, 
 	return nil
 }
 
-// Supports "<condition_id>" or "<account_id>/<condition_id>". The account_id
-// segment is required because reading a Condition does not return enough
-// information to address sub-accounts on its own.
 func resourceAbpConditionImport(ctx context.Context, data *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
-	raw := strings.TrimSpace(data.Id())
-	if raw == "" {
-		return nil, fmt.Errorf("expected import ID to be '<condition_id>' or '<account_id>/<condition_id>'")
+	id := strings.TrimSpace(data.Id())
+	if id == "" {
+		return nil, fmt.Errorf("expected import ID to be '<condition_id>'")
 	}
 
-	if strings.Contains(raw, "/") {
-		parts := strings.SplitN(raw, "/", 2)
-		if len(parts) != 2 || strings.TrimSpace(parts[0]) == "" || strings.TrimSpace(parts[1]) == "" {
-			return nil, fmt.Errorf("invalid import ID %q: want '<condition_id>' or '<account_id>/<condition_id>'", raw)
-		}
-		if err := data.Set("account_id", strings.TrimSpace(parts[0])); err != nil {
-			return nil, fmt.Errorf("setting account_id: %w", err)
-		}
-		data.SetId(strings.TrimSpace(parts[1]))
-	} else {
-		data.SetId(raw)
-	}
-
+	data.SetId(id)
 	return []*schema.ResourceData{data}, nil
 }

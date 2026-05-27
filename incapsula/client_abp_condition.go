@@ -13,7 +13,6 @@ const abpConditionResourceName = "ABP Condition"
 type AbpCondition struct {
 	Id           string  `json:"id,omitempty"`
 	AccountId    string  `json:"account_id,omitempty"`
-	Owner        string  `json:"owner,omitempty"`
 	Name         string  `json:"name"`
 	Description  string  `json:"description"`
 	Code         string  `json:"code"`
@@ -69,17 +68,17 @@ func (c *Client) ReadAbpCondition(conditionId string) (*AbpCondition, error) {
 	}
 	defer resp.Body.Close()
 
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body when reading %s: %w", abpConditionResourceName, err)
+	}
+
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, nil
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("error status code %d when reading %s %s", resp.StatusCode, abpConditionResourceName, conditionId)
-	}
-
-	responseBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading response body when reading %s: %w", abpConditionResourceName, err)
+		return nil, fmt.Errorf("error status code %d when reading %s %s: %s", resp.StatusCode, abpConditionResourceName, conditionId, string(responseBody))
 	}
 
 	var condition AbpCondition
