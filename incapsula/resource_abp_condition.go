@@ -103,11 +103,8 @@ func serializeAbpCondition(data *schema.ResourceData, condition *AbpCondition) e
 	if err := data.Set("code_normalized", condition.Code); err != nil {
 		return err
 	}
-	// TODO: Remove empty string check
-	if condition.AccountId != "" {
-		if err := data.Set("account_id", condition.AccountId); err != nil {
-			return err
-		}
+	if err := data.Set("account_id", condition.AccountId); err != nil {
+		return err
 	}
 	if condition.LastChangeBy != nil {
 		if err := data.Set("last_change_by", *condition.LastChangeBy); err != nil {

@@ -38,9 +38,7 @@ func (c *Client) CreateAbpCondition(accountId string, condition AbpCondition) (*
 		return nil, fmt.Errorf("failed to marshal %s: %w", abpConditionResourceName, err)
 	}
 
-	url := c.abpConditionAccountUrl(accountId)
-	log.Printf("%s: url=%s", "CreateAbpCondition", url)
-	resp, err := c.DoJsonRequestWithHeaders(http.MethodPost, url, body, CreateAbpCondition)
+	resp, err := c.DoJsonRequestWithHeaders(http.MethodPost, c.abpConditionAccountUrl(accountId), body, CreateAbpCondition)
 	if err != nil {
 		return nil, fmt.Errorf("error creating %s in ABP account %s: %w", abpConditionResourceName, accountId, err)
 	}
@@ -75,7 +73,6 @@ func (c *Client) ReadAbpCondition(conditionId string) (*AbpCondition, error) {
 		return nil, nil
 	}
 
-	// TODO: do not return status code
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("error status code %d when reading %s %s", resp.StatusCode, abpConditionResourceName, conditionId)
 	}
