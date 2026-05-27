@@ -17,7 +17,7 @@ provider "incapsula" {
 
 resource "incapsula_abp_condition" "cond1" {
   account_id  = "a9fa7bb9-a36e-40aa-ac81-fe320d634988"
-  name        = "terraform-1"
+  name        = "terraform-0"
   description = "Created through terraform twice"
   code        = "(any true false)"
 }

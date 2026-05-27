@@ -107,10 +107,12 @@ func serializeAbpCondition(data *schema.ResourceData, condition *AbpCondition) e
 		return err
 	}
 
-	if condition.AccountId != "" {
-		if err := data.Set("account_id", condition.AccountId); err != nil {
-			return err
-		}
+	if condition.AccountId == "" {
+		return fmt.Errorf("Managed conditions are not supported: account_id of condition %s is empty", condition.Id)
+	}
+
+	if err := data.Set("account_id", condition.AccountId); err != nil {
+		return err
 	}
 
 	if err := data.Set("last_change_by", condition.LastChangeBy); err != nil {
@@ -230,5 +232,9 @@ func resourceAbpConditionImport(ctx context.Context, data *schema.ResourceData, 
 	}
 
 	data.SetId(id)
+	if err := data.Set("account_id", condition.AccountId); err != nil {
+		return nil, err
+	}
+
 	return []*schema.ResourceData{data}, nil
 }

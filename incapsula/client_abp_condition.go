@@ -11,14 +11,14 @@ import (
 const abpConditionResourceName = "ABP Condition"
 
 type AbpCondition struct {
-	Id           string  `json:"id,omitempty"`
-	AccountId    string  `json:"account_id,omitempty"`
-	Name         string  `json:"name"`
-	Description  string  `json:"description"`
-	Code         string  `json:"code"`
-	LastChangeBy *string `json:"last_change_by,omitempty"`
-	CreatedAt    *string `json:"created_at,omitempty"`
-	ModifiedAt   *string `json:"modified_at,omitempty"`
+	Id           string `json:"id,omitempty"`
+	AccountId    string `json:"account_id,omitempty"`
+	Name         string `json:"name"`
+	Description  string `json:"description"`
+	Code         string `json:"code"`
+	LastChangeBy string `json:"last_change_by,omitempty"`
+	CreatedAt    string `json:"created_at,omitempty"`
+	ModifiedAt   string `json:"modified_at,omitempty"`
 }
 
 func (c *Client) abpConditionAccountUrl(accountId string) string {
@@ -91,7 +91,6 @@ func (c *Client) ReadAbpCondition(conditionId string) (*AbpCondition, error) {
 func (c *Client) UpdateAbpCondition(conditionId string, condition AbpCondition) (*AbpCondition, error) {
 	log.Printf("[INFO] Updating %s with id %s", abpConditionResourceName, conditionId)
 
-	condition.Id = conditionId
 	body, err := json.Marshal(condition)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal %s: %w", abpConditionResourceName, err)
