@@ -91,6 +91,7 @@ func (c *Client) ReadAbpCondition(conditionId string) (*AbpCondition, error) {
 func (c *Client) UpdateAbpCondition(conditionId string, condition AbpCondition) (*AbpCondition, error) {
 	log.Printf("[INFO] Updating %s with id %s", abpConditionResourceName, conditionId)
 
+	condition.Id = conditionId
 	body, err := json.Marshal(condition)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal %s: %w", abpConditionResourceName, err)
@@ -105,6 +106,10 @@ func (c *Client) UpdateAbpCondition(conditionId string, condition AbpCondition) 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("error reading response body when updating %s: %w", abpConditionResourceName, err)
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil
 	}
 
 	if resp.StatusCode != http.StatusOK {

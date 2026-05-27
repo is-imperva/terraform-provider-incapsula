@@ -46,9 +46,9 @@ to copy "code_normalized" to "code" after running "terraform import".`,
 				ValidateFunc: validation.StringLenBetween(1, 100),
 			},
 			"description": {
-				Description: "Description of the condition. Required by the API; empty string is allowed.",
+				Description: "Description of the condition.",
 				Type:        schema.TypeString,
-				Optional:    true,
+				Required:    true,
 			},
 			"code": {
 				Description: "MOI expression evaluated against the request. The server stores a " +
@@ -56,7 +56,7 @@ to copy "code_normalized" to "code" after running "terraform import".`,
 					"Out-of-band edits to this field (via the UI or API) will not be detected as drift.",
 				Type:         schema.TypeString,
 				Required:     true,
-				ValidateFunc: validation.StringIsNotEmpty,
+				ValidateFunc: validation.StringIsNotWhiteSpace,
 			},
 			"code_normalized": {
 				Description: "Server-side normalized/optimized form of `code`. Useful for " +
@@ -107,35 +107,21 @@ func serializeAbpCondition(data *schema.ResourceData, condition *AbpCondition) e
 		return err
 	}
 
-	// AccountId might be empty (i.e. for managed conditions), don't overwrite the state value
-	// in this case, otherwise Terraform will treat it as deleted
 	if condition.AccountId != "" {
 		if err := data.Set("account_id", condition.AccountId); err != nil {
 			return err
 		}
 	}
 
-	var lastChangeBy string
-	if condition.LastChangeBy != nil {
-		lastChangeBy = *condition.LastChangeBy
-	}
-	if err := data.Set("last_change_by", lastChangeBy); err != nil {
+	if err := data.Set("last_change_by", condition.LastChangeBy); err != nil {
 		return err
 	}
 
-	var createdAt string
-	if condition.CreatedAt != nil {
-		createdAt = *condition.CreatedAt
-	}
-	if err := data.Set("created_at", createdAt); err != nil {
+	if err := data.Set("created_at", condition.CreatedAt); err != nil {
 		return err
 	}
 
-	var modifiedAt string
-	if condition.ModifiedAt != nil {
-		modifiedAt = *condition.ModifiedAt
-	}
-	if err := data.Set("modified_at", modifiedAt); err != nil {
+	if err := data.Set("modified_at", condition.ModifiedAt); err != nil {
 		return err
 	}
 
@@ -166,9 +152,6 @@ func resourceAbpConditionCreate(ctx context.Context, data *schema.ResourceData, 
 func resourceAbpConditionRead(ctx context.Context, data *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*Client)
 	id := data.Id()
-	if id == "" {
-		return nil
-	}
 
 	condition, err := client.ReadAbpCondition(id)
 	if err != nil {
@@ -204,6 +187,12 @@ func resourceAbpConditionUpdate(ctx context.Context, data *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
+	// Condition not found
+	if updated == nil {
+		data.SetId("")
+		return nil
+	}
+
 	if err := serializeAbpCondition(data, updated); err != nil {
 		return diag.FromErr(err)
 	}
@@ -226,6 +215,18 @@ func resourceAbpConditionImport(ctx context.Context, data *schema.ResourceData, 
 	id := strings.TrimSpace(data.Id())
 	if id == "" {
 		return nil, fmt.Errorf("expected import ID to be '<condition_id>'")
+	}
+
+	client := m.(*Client)
+	condition, err := client.ReadAbpCondition(id)
+	if err != nil {
+		return nil, err
+	}
+	if condition == nil {
+		return nil, fmt.Errorf("ABP Condition %s not found", id)
+	}
+	if condition.AccountId == "" {
+		return nil, fmt.Errorf("ABP Condition %s is a managed condition and cannot be imported; only account-owned conditions are supported", id)
 	}
 
 	data.SetId(id)
