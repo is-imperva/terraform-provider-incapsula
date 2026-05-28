@@ -212,6 +212,15 @@ const ReadAbpProofOfWorkConfiguration = "read_abp_proof_of_work_configuration"
 const UpdateAbpProofOfWorkConfiguration = "update_abp_proof_of_work_configuration"
 const DeleteAbpProofOfWorkConfiguration = "delete_abp_proof_of_work_configuration"
 
+const CreateAbpPolicy = "create_abp_policy"
+const ReadAbpPolicy = "read_abp_policy"
+const UpdateAbpPolicy = "update_abp_policy"
+const DeleteAbpPolicy = "delete_abp_policy"
+
+const ReadAbpPreflightStatus = "read_abp_preflight_status"
+const CreateAbpPreflight = "create_abp_preflight"
+const PublishAbpPreflight = "publish_abp_preflight"
+
 const RequestSiteCert = "request_site_cert"
 
 const AddV3Site = "add_v3_site"
