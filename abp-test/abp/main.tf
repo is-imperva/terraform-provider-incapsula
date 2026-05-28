@@ -46,3 +46,25 @@ resource "incapsula_abp_condition" "cond1" {
   description = "Created through terraform twice"
   code        = "(any true false)"
 }
+
+output "cond1" {
+  value = incapsula_abp_condition.cond1
+}
+
+resource "incapsula_abp_proof_of_work_configuration" "pow1" {
+  account_id = var.account_id
+  name       = "terraform-pow-0"
+  difficulty = 42
+  algorithm  = "bbs"
+}
+
+output "pow1" {
+  value = incapsula_abp_proof_of_work_configuration.pow1
+}
+
+resource "incapsula_abp_proof_of_work_configuration" "easy-peasy" {
+  account_id = var.account_id
+  name       = "Easy-peasy"
+  difficulty = 1000000
+  algorithm  = "bbs"
+}

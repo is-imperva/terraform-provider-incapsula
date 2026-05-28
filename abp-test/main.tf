@@ -37,18 +37,3 @@ resource "incapsula_abp_preflight" "current" {
 resource "incapsula_abp_publish" "publish" {
   preflight_id = incapsula_abp_preflight.current.id
 }
-
-output "cond1" {
-  value = incapsula_abp_condition.cond1
-}
-
-resource "incapsula_abp_proof_of_work_configuration" "pow1" {
-  account_id = "a9fa7bb9-a36e-40aa-ac81-fe320d634988"
-  name       = "terraform-pow-0"
-  difficulty = 42
-  algorithm  = "bbs"
-}
-
-output "pow1" {
-  value = incapsula_abp_proof_of_work_configuration.pow1
-}
