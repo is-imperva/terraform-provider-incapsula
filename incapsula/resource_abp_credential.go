@@ -25,15 +25,15 @@ func resourceAbpCredential() *schema.Resource {
 Host. The secret is generated server-side on creation and cannot be retrieved
 again later, so it is exposed at creation time only.
 
-If ` + "`pgp_key`" + ` is supplied, the secret is encrypted to that key and stored
+If ` + "`rsa_key`" + ` is supplied, the secret is encrypted to that key using OAEP with SHA256 and the label 'abp_credential', and stored
 only as ` + "`encrypted_secret`" + `; the plaintext ` + "`secret`" + ` is never written to
 state. This is strongly recommended, since ` + "`Sensitive`" + ` attributes are
 redacted from CLI output but are still stored in plaintext in the state file.
 Decrypt locally with, for example:
-` + "`terraform output -raw encrypted_secret | base64 -d | gpg -d`" + `.
+` + "`terraform output -raw encrypted_secret | base64 -d | openssl pkeyutl -decrypt -inkey <your-private-key-file> -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 -pkeyopt rsa_oaep_label:$(echo -n 'abp_credential' | xxd -p)`" + `.
 
 NOTE: credentials cannot be modified in place. Changing ` + "`account_id`" + ` or
-` + "`pgp_key`" + ` forces resource replacement. The Account configuration must be
+` + "`rsa_key`" + ` forces resource replacement. The Account configuration must be
 published for the analysis host to begin accepting a new credential, and you
 should keep the previous credential alive until that publish completes (see the
 API documentation for the recommended rotation procedure).`,
@@ -46,25 +46,20 @@ API documentation for the recommended rotation procedure).`,
 				ForceNew:     true,
 				ValidateFunc: validation.IsUUID,
 			},
-			"pgp_key": {
-				Description: "Either a base64-encoded PGP public key, or a keybase reference of the form `keybase:some_person_that_exists`. If set, the secret is encrypted to this key and stored only in `encrypted_secret`, keeping the plaintext out of state.",
+			"rsa_key": {
+				Description: "A full PEM-encoded RSA public key to use for encrypting the secret in state. If set, the secret is encrypted to this key and stored only in `encrypted_secret`, keeping the plaintext out of state.",
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
 			},
 			"secret": {
-				Description: "Base64-encoded credential secret. Generated server-side at creation time and never returned again afterwards. Empty when `pgp_key` is set.",
+				Description: "Base64-encoded credential secret. Generated server-side at creation time and never returned again afterwards. Empty when `rsa_key` is set.",
 				Type:        schema.TypeString,
 				Computed:    true,
 				Sensitive:   true,
 			},
 			"encrypted_secret": {
-				Description: "The PGP-encrypted, base64-encoded credential secret. Only populated when `pgp_key` is set.",
-				Type:        schema.TypeString,
-				Computed:    true,
-			},
-			"key_fingerprint": {
-				Description: "Fingerprint of the PGP key used to encrypt the secret. Only populated when `pgp_key` is set.",
+				Description: "The RSA-encrypted, base64-encoded credential secret. Only populated when `rsa_key` is set.",
 				Type:        schema.TypeString,
 				Computed:    true,
 			},
@@ -116,18 +111,15 @@ func resourceAbpCredentialCreate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	if pgpKey, ok := data.Get("pgp_key").(string); ok && pgpKey != "" {
-		fingerprint, encrypted, err := encryptPgpValue(pgpKey, []byte(created.Secret))
+	if rsaKey, ok := data.Get("rsa_key").(string); ok && rsaKey != "" {
+		encrypted, err := encryptRsa([]byte(rsaKey), []byte(created.Secret), "abp_credential")
 		if err != nil {
-			return diag.FromErr(err)
-		}
-		if err := data.Set("key_fingerprint", fingerprint); err != nil {
 			return diag.FromErr(err)
 		}
 		if err := data.Set("encrypted_secret", encrypted); err != nil {
 			return diag.FromErr(err)
 		}
-		// Keep the plaintext secret out of state when a pgp_key is provided.
+		// Keep the plaintext secret out of state when a rsa_key is provided.
 		if err := data.Set("secret", ""); err != nil {
 			return diag.FromErr(err)
 		}
