@@ -27,6 +27,13 @@ data "incapsula_abp_condition" "specific_visitor_lookup" {
   name       = incapsula_abp_condition.specific_visitor.name
 }
 
+resource "incapsula_abp_condition" "okhttp" {
+  account_id  = var.account_id
+  name        = "OkHttp"
+  description = "Matches requests initiated by okhttp"
+  code        = "(all headers.user_agent? (matches headers.user_agent \"okhttp/4.12.0\"))"
+
+}
 #
 # Lookup a managed condition to subsequently insert into a policy
 #
@@ -50,7 +57,7 @@ resource "incapsula_abp_condition_list" "sample_condition_list" {
 resource "incapsula_abp_condition_list_entry" "sample_condition_list_specific_visitor" {
   account_id               = var.account_id
   parent_condition_list_id = incapsula_abp_condition_list.sample_condition_list.id
-  condition_id             = incapsula_abp_condition.specific_visitor.id
+  condition_id             = incapsula_abp_condition.okhttp.id
   state                    = "active"
   tags                     = ["terraform_managed"]
 }
