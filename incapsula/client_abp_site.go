@@ -103,8 +103,8 @@ func (c *Client) abpSiteUrl(siteId string) string {
 //
 //  1. the server returned exactly one more selector than `expected` — we know
 //     how many selectors we sent, and the API appends exactly one default; and
-//  2. the trailing selector has the default's shape: `criteria.path_regex ==
-//     ".*"`.
+//  2. the trailing selector has the default's shape: `criteria.path_prefix ==
+//     "/"`.
 //
 // If the count matches but the shape doesn't, that's genuine drift (e.g. a
 // user-added trailing selector the API surfaced) and we leave it visible so
@@ -118,10 +118,9 @@ func stripExpectedDefaultSelector(site *AbpSite, expected int) {
 		return
 	}
 	last := site.Selectors[len(site.Selectors)-1]
-	if last.Criteria.PathRegex == nil || *last.Criteria.PathRegex != ".*" {
-		return
+	if *last.Criteria.PathPrefix == "/" {
+		site.Selectors = site.Selectors[:expected]
 	}
-	site.Selectors = site.Selectors[:expected]
 }
 
 func (c *Client) CreateAbpSite(accountId string, site AbpSite) (*AbpSite, error) {
