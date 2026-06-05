@@ -120,7 +120,7 @@ func splitDefaultSelector(site *AbpSite) {
 		return
 	}
 	last := site.Selectors[n-1]
-	if !isDefaultSelectorShape(last) {
+	if isDefaultSelectorShape(last) {
 		site.DefaultSelector = &last
 		site.Selectors = site.Selectors[:n-1]
 	}
