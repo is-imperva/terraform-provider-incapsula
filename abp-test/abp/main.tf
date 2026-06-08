@@ -71,8 +71,25 @@ data "incapsula_abp_condition_list" "sample_condition_list_lookup" {
 #
 # Create a policy with standard directives and populate it with conditions
 #
+#
 
-# TODO
+
+# Demonstrate referencing directives by action. This way is preferred than referencing directives
+# by its sequential index via `incapsula_abp_policy.some_policy.directive[i]` as it gives more
+# predictable result
+data "incapsula_abp_directive" "std_policy_block" {
+  policy_id = incapsula_abp_policy.policy_with_standard_directives.id
+  action    = "block"
+}
+
+resource "incapsula_abp_condition_list_entry" "std_policy_allow_okhttp" {
+  account_id               = var.account_id
+  parent_condition_list_id = data.incapsula_abp_directive.std_policy_block.condition_list_id
+  condition_id             = incapsula_abp_condition.okhttp.id
+  state                    = "active"
+  tags                     = ["terraform_managed"]
+}
+
 
 #
 # Create a policy with custom directives and populate it with conditions
@@ -100,6 +117,7 @@ resource "incapsula_abp_policy" "policy2" {
     action = "allow"
   }
 
+
   directive {
     action = "block"
   }
@@ -116,6 +134,7 @@ data "incapsula_abp_policy" "policy2" {
   name       = incapsula_abp_policy.policy2.name
 }
 
+# Add condition to the directive. Directive is referenced by its sequential index in the policy
 resource "incapsula_abp_condition_list_entry" "policy2_allow_monitoring_tools" {
   account_id = var.account_id
   # TODO: index by action?
