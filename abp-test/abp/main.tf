@@ -54,7 +54,7 @@ resource "incapsula_abp_condition_list" "sample_condition_list" {
   description = "Reusable condition list"
 }
 
-resource "incapsula_abp_condition_list_entry" "sample_condition_list_specific_visitor" {
+resource "incapsula_abp_condition_list_entry" "sample_condition_list_okhttp" {
   account_id               = var.account_id
   parent_condition_list_id = incapsula_abp_condition_list.sample_condition_list.id
   condition_id             = incapsula_abp_condition.okhttp.id
@@ -90,6 +90,21 @@ resource "incapsula_abp_condition_list_entry" "std_policy_allow_okhttp" {
   tags                     = ["terraform_managed"]
 }
 
+resource "incapsula_abp_policy" "policy_with_standard_directives" {
+  account_id              = var.account_id
+  name                    = "Policy with standard directives"
+  description             = "Terraform-managed policy with standard directives"
+  use_standard_directives = true
+}
+
+# Now add conditions to the automatically created directives
+resource "incapsula_abp_condition_list_entry" "std_policy_allow_okhttp" {
+  account_id               = var.account_id
+  parent_condition_list_id = incapsula_abp_policy.policy_with_standard_directives.directive[0].condition_list_id
+  condition_id             = incapsula_abp_condition.okhttp.id
+  state                    = "active"
+  tags                     = ["terraform_managed"]
+}
 
 #
 # Create a policy with custom directives and populate it with conditions
@@ -136,8 +151,7 @@ data "incapsula_abp_policy" "policy2" {
 
 # Add condition to the directive. Directive is referenced by its sequential index in the policy
 resource "incapsula_abp_condition_list_entry" "policy2_allow_monitoring_tools" {
-  account_id = var.account_id
-  # TODO: index by action?
+  account_id               = var.account_id
   parent_condition_list_id = incapsula_abp_policy.policy2.directive[0].condition_list_id
   condition_id             = data.incapsula_abp_condition.managed_monitoring_tools.id
   state                    = "active"
@@ -209,6 +223,29 @@ resource "incapsula_abp_site" "sample_site" {
 }
 
 #
+# Add a condition to the default policy
+#
+
+# Lookup a default policy via default selector of the site. This is required
+# to get access to the policy directives
+# Note that default selector is indexed with `[0]` even if it is not techically a list,
+# since every site can have only one default selector. This is limitation of
+# Terraform Plugin SDK v2
+data "incapsula_abp_policy" "default_policy" {
+  id = incapsula_abp_site.sample_site.default_selector[0].policy_id
+}
+
+
+# Add `specific_visitor` to the allow directive of the default policy
+resource "incapsula_abp_condition_list_entry" "sample_site_default_allow_specific_visitor" {
+  account_id               = var.account_id
+  parent_condition_list_id = data.incapsula_abp_policy.default_policy.directive[0].condition_list_id
+  condition_id             = incapsula_abp_condition.specific_visitor.id
+  tags                     = ["specific_visitor"]
+  state                    = "monitor"
+}
+
+#
 # Create domains in the previously created site
 #
 resource "incapsula_abp_domain" "test_com" {
@@ -227,10 +264,9 @@ resource "incapsula_abp_domain" "test_com" {
   unmasked_headers                   = ["content-length", "content-type"]
   proxy_flags                        = ["enable_referrer_fix", "inject_js_into_body"]
 
-  # Temporary commented out as it doesn't work locally due to MY dependency
-  # no_js_injection_path {
-  #   path_prefix = "/no-js-here"
-  # }
+  no_js_injection_path {
+    path_prefix = "/no-js-here"
+  }
 
   captcha_settings {
     // Todo: Could unpack this into a `data`
@@ -260,8 +296,8 @@ resource "incapsula_abp_domain" "example_com" {
   log_region  = "usa"
   cookie_mode = "lax"
 
-  # Temporary commented out as it doesn't work locally due to MY dependency
   // Todo: reference a rule here
+  // Commented out due to no MY available locally
   # no_js_injection_path {
   #   incap_rule = "URL == \"/admin\""
   # }
@@ -330,14 +366,14 @@ resource "incapsula_abp_site" "site2" {
   }
 }
 
-/*resource "incapsula_abp_account_site_priority" "accprio" {
-  account_id = var.account_id
-  site_ids = [
-    incapsula_abp_site.site2.id,
-    incapsula_abp_site.site1.id,
-    // .. fill out complete list
-  ]
-}*/
+# TODO
+# resource "incapsula_abp_account_site_priority" "site_priority" {
+#   account_id = var.account_id
+#   site_ids = [
+#     incapsula_abp_site.sample_site.id,
+#     incapsula_abp_site.site2.id,
+#   ]
+# }
 
 resource "incapsula_abp_credential" "my_credential" {
   account_id = var.account_id
