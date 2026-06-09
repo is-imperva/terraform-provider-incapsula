@@ -70,9 +70,16 @@ data "incapsula_abp_condition_list" "sample_condition_list_lookup" {
 
 #
 # Create a policy with standard directives and populate it with conditions
+# using`incapsula_abp_directive` data source
 #
 #
 
+resource "incapsula_abp_policy" "policy_with_standard_directives" {
+  account_id              = var.account_id
+  name                    = "Policy with standard directives"
+  description             = "Terraform-managed policy with standard directives"
+  use_standard_directives = true
+}
 
 # Demonstrate referencing directives by action. This way is preferred than referencing directives
 # by its sequential index via `incapsula_abp_policy.some_policy.directive[i]` as it gives more
@@ -90,24 +97,9 @@ resource "incapsula_abp_condition_list_entry" "std_policy_allow_okhttp" {
   tags                     = ["terraform_managed"]
 }
 
-resource "incapsula_abp_policy" "policy_with_standard_directives" {
-  account_id              = var.account_id
-  name                    = "Policy with standard directives"
-  description             = "Terraform-managed policy with standard directives"
-  use_standard_directives = true
-}
-
-# Now add conditions to the automatically created directives
-resource "incapsula_abp_condition_list_entry" "std_policy_allow_okhttp" {
-  account_id               = var.account_id
-  parent_condition_list_id = incapsula_abp_policy.policy_with_standard_directives.directive[0].condition_list_id
-  condition_id             = incapsula_abp_condition.okhttp.id
-  state                    = "active"
-  tags                     = ["terraform_managed"]
-}
-
 #
 # Create a policy with custom directives and populate it with conditions
+# referencing directive directly via `incapsula_abp_policy.<name>.directive`
 #
 
 resource "incapsula_abp_proof_of_work_configuration" "pow1" {
