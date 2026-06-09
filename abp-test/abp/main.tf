@@ -68,6 +68,7 @@ data "incapsula_abp_condition_list" "sample_condition_list_lookup" {
   name       = incapsula_abp_condition_list.sample_condition_list.name
 }
 
+
 #
 # Create a policy with standard directives and populate it with conditions
 #
@@ -152,6 +153,24 @@ resource "incapsula_abp_condition_list_entry" "policy2_block_sample_condition_li
   parent_condition_list_id = incapsula_abp_policy.policy2.directive[1].condition_list_id
   condition_list_id        = incapsula_abp_condition_list.sample_condition_list.id
   state                    = "monitor"
+  tags                     = ["terraform_managed"]
+}
+
+#
+# Lookup the account global policy and populate it with conditions
+#
+
+data "incapsula_abp_policy" "account_global" {
+  account_id     = var.account_id
+  account_global = true
+}
+
+# Now add conditions to the automatically created directives
+resource "incapsula_abp_condition_list_entry" "account_global_allow_okhttp" {
+  account_id               = var.account_id
+  parent_condition_list_id = data.incapsula_abp_policy.account_global.directive[0].condition_list_id
+  condition_id             = incapsula_abp_condition.okhttp.id
+  state                    = "active"
   tags                     = ["terraform_managed"]
 }
 
