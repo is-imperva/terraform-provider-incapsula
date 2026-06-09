@@ -172,15 +172,25 @@ resource "incapsula_abp_condition_list_entry" "policy2_block_sample_condition_li
 # Lookup the account global policy and populate it with conditions
 #
 
+# Lookup the account global policy.
+# Note: the account global policy can't be directly referenced by the returned policy id,
+# for example in `incapsula_abp_directive.policy_id`. Use `account_global_policy = true`
+# on `incapsula_abp_directive` instead (see below).
 data "incapsula_abp_policy" "account_global" {
   account_id     = var.account_id
   account_global = true
 }
 
+data "incapsula_abp_directive" "account_global_allow" {
+  account_id            = var.account_id
+  account_global_policy = true
+  action                = "allow"
+}
+
 # Now add conditions to the automatically created directives
 resource "incapsula_abp_condition_list_entry" "account_global_allow_okhttp" {
   account_id               = var.account_id
-  parent_condition_list_id = data.incapsula_abp_policy.account_global.directive[0].condition_list_id
+  parent_condition_list_id = data.incapsula_abp_directive.account_global_allow.condition_list_id
   condition_id             = incapsula_abp_condition.okhttp.id
   state                    = "active"
   tags                     = ["terraform_managed"]
