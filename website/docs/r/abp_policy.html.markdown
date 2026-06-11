@@ -3,13 +3,26 @@ subcategory: "Advanced Bot Protection"
 layout: "incapsula"
 page_title: "incapsula_abp_policy"
 description: |-
-  Incapsula ABP policy resource
+  Provides an ABP Policy resource. A Policy is an ordered collection of
+  directives, each pairing an action with the conditions that trigger it, applied
+  to traffic that a Site's selector maps to this Policy.
+  Set use_standard_directives to create the Policy with the standard set of
+  directives (matching the ABP UI's "Standard Directives" choice), or provide
+  explicit directive blocks. Each directive exposes a condition_list_id to
+  which conditions are attached via incapsula_abp_condition_list_entry.
 ---
 
 
 # incapsula_abp_policy
 
-Incapsula ABP policy resource
+Provides an ABP Policy resource. A Policy is an ordered collection of
+directives, each pairing an action with the conditions that trigger it, applied
+to traffic that a Site's selector maps to this Policy.
+
+Set `use_standard_directives` to create the Policy with the standard set of
+directives (matching the ABP UI's "Standard Directives" choice), or provide
+explicit `directive` blocks. Each directive exposes a `condition_list_id` to
+which conditions are attached via `incapsula_abp_condition_list_entry`.
 
 ## Example Usage
 
@@ -50,12 +63,12 @@ resource "incapsula_abp_policy" "policy_with_custom_directives" {
 ### Required
 
 - `account_id` (String) The account this policy belongs to.
-- `name` (String) Policy name
+- `name` (String) Policy name. 1..100 characters.
 
 ### Optional
 
 - `description` (String) Optional policy description.
-- `directive` (Block List) Ordered list of directives evaluated top-down for this policy. Computed when `use_standard_directives` is true; otherwise required. (see [below for nested schema](#nestedblock--directive))
+- `directive` (Block List) Ordered list of directives evaluated top-down for this policy. A policy must have at least one directive. Computed when `use_standard_directives` is true; otherwise required. (see [below for nested schema](#nestedblock--directive))
 - `use_standard_directives` (Boolean) If true, the policy is created with the standard set of directives (matching the ABP UI's "Standard Directives" choice). When set, custom `directive` blocks must not be specified.
 
 ### Read-Only
@@ -67,7 +80,7 @@ resource "incapsula_abp_policy" "policy_with_custom_directives" {
 
 Required:
 
-- `action` (String) Action to take when this directive matches.
+- `action` (String) Action to take when this directive matches. Must be snake_case, 1..100 characters.
 
 Optional:
 

@@ -45,6 +45,6 @@ data "incapsula_abp_directive" "account_global_allow" {
 ### Read-Only
 
 - `condition_list_id` (String) Condition list containing conditions for this directive.
-- `id` (String) The ID of this resource.
+- `id` (String) Artificial identifier for this data source. Directives have no stable ID in the API, so this is synthesized from the policy and action (`<policy_id>:<action>`, or `global:<account_id>:<action>` for the account global policy) and is not a real API identifier.
 - `proof_of_work_configuration_id` (String) ID of the proof-of-work configuration applied. Only set when `action` is `proof_of_work`.
 - `skip_condition_list_id` (String) Condition list whose matches skip this directive. Only set when `action` is `proof_of_work`.

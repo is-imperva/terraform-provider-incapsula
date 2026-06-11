@@ -97,6 +97,13 @@ copy_kind() {
   shopt -s nullglob
   for src in "$GEN_DIR/$gen_sub"/*abp_*.md; do
     base="$(basename "${src%.md}")"          # e.g. abp_site
+
+    # `incapsula_abp_websites` has a hand-written doc; never regenerate it.
+    if [ "$base" = "abp_websites" ]; then
+      echo "  IGNORE $base — excluded from generation"
+      continue
+    fi
+
     stem="$target_dir/$base"
 
     # Collision check: any pre-existing legacy doc for this resource,
