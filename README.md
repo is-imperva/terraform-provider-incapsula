@@ -183,3 +183,20 @@ To add new endpoints to the mock server:
 Prerequisite:
 
     go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@latest
+
+Make sure `$(go env GOPATH)/bin` is in your `$PATH`, then run:
+
+```sh
+# Generate docs for abp_* resources/data sources into website/docs/{r,d}.
+# Skips any resource that already has a hand-written doc.
+scripts/gen-abp-docs.sh
+
+# Overwrite existing legacy docs as well.
+FORCE=1 scripts/gen-abp-docs.sh
+```
+
+The script renders the full provider schema, keeps only the `abp_*` files, and
+converts them to the legacy `website/` layout (`.html.markdown` + `incapsula`
+front matter). Afterwards, review the generated
+`website/docs/{r,d}/abp_*.html.markdown` files and add sidebar entries in
+`website/incapsula.erb` if needed.
