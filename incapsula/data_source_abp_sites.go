@@ -17,6 +17,16 @@ func dataSourceAbpSites() *schema.Resource {
 			Type:        schema.TypeString,
 			Computed:    true,
 		},
+		"account_id": {
+			Description: "ABP account UUID the Site belongs to.",
+			Type:        schema.TypeString,
+			Computed:    true,
+		},
+		"name": {
+			Description: "Name of the Site.",
+			Type:        schema.TypeString,
+			Computed:    true,
+		},
 	}
 	maps.Copy(siteAttributes, abpSiteReadOnlyAttributes())
 
