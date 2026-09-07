@@ -304,6 +304,39 @@ func flattenAbpSelectors(selectors []AbpSelector, nestedKind bool) ([]any, error
 	return out, nil
 }
 
+func flattenAbpSite(site *AbpSite) (map[string]any, error) {
+	selectors, err := flattenAbpSelectors(site.Selectors, true)
+	if err != nil {
+		return nil, err
+	}
+
+	var defaultSelector []any
+	if site.DefaultSelector != nil {
+		defaultSelector, err = flattenAbpSelectors([]AbpSelector{*site.DefaultSelector}, false)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	m := map[string]any{
+		"id":               site.Id,
+		"selector":         selectors,
+		"default_selector": defaultSelector,
+		"created_at":       site.CreatedAt,
+		"modified_at":      site.ModifiedAt,
+	}
+	if site.DefaultMaxRequestsPerMinute != nil {
+		m["default_max_requests_per_minute"] = *site.DefaultMaxRequestsPerMinute
+	}
+	if site.DefaultMaxRequestsPerSession != nil {
+		m["default_max_requests_per_session"] = *site.DefaultMaxRequestsPerSession
+	}
+	if site.DefaultMaxSessionLength != nil {
+		m["default_max_session_length"] = *site.DefaultMaxSessionLength
+	}
+	return m, nil
+}
+
 func serializeAbpSite(data *schema.ResourceData, site *AbpSite) error {
 	if err := data.Set("account_id", site.AccountId); err != nil {
 		return err

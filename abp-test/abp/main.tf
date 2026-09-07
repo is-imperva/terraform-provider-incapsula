@@ -249,6 +249,18 @@ resource "incapsula_abp_site" "sample_site" {
   }
 }
 
+data "incapsula_abp_sites" "all" {
+  account_id            = var.account_id
+}
+
+resource "incapsula_abp_account_site_priority" "accprio" {
+  account_id = var.account_id
+  site_ids = concat(
+    [incapsula_abp_site.sample_site.id],
+    [for site in data.incapsula_abp_sites.all.sites : site.id if site.id != incapsula_abp_site.sample_site.id],
+  )
+}
+
 #
 # Add a condition to the default policy
 #
