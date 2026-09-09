@@ -37,7 +37,10 @@ func dataSourceAbpSites() *schema.Resource {
 			"Use this to reference Sites that are not managed by this Terraform " +
 			"configuration when all of them are of interest, for example when building " +
 			"an `incapsula_abp_account_site_priority` list. Use `incapsula_abp_site` to " +
-			"look up a single Site by `site_id` or `name` instead.",
+			"look up a single Site by `site_id` or `name` instead.\n\n" +
+			"Note: The time of reading this datasource is not defined by the terraform module. That means that" +
+			"the read is subject to race-conditions. If a site is created or deleted in the same plan as this " +
+			"datasource is read, it may yield unexpected results.",
 
 		Schema: map[string]*schema.Schema{
 			"account_id": {
