@@ -126,6 +126,78 @@ func splitDefaultSelector(site *AbpSite) {
 	}
 }
 
+func flattenAbpSelectors(selectors []AbpSelector, nestedKind bool) ([]any, error) {
+	out := make([]any, len(selectors))
+	for i, s := range selectors {
+		encoded, err := json.Marshal(s.AnalysisSettings)
+		if err != nil {
+			return nil, fmt.Errorf("encoding selector[%d].analysis_settings: %w", i, err)
+		}
+		m := map[string]any{
+			"id":                s.Id,
+			"analysis_settings": string(encoded),
+		}
+		if s.PolicyId != nil {
+			m["policy_id"] = *s.PolicyId
+		}
+
+		criteria := map[string]any{}
+		if s.Criteria.PathPrefix != nil {
+			criteria["path_prefix"] = *s.Criteria.PathPrefix
+		}
+		if s.Criteria.PathRegex != nil {
+			criteria["path_regex"] = *s.Criteria.PathRegex
+		}
+		if s.Criteria.Postback != nil {
+			criteria["postback"] = *s.Criteria.Postback
+		}
+		if nestedKind {
+			m["kind"] = []any{criteria}
+		} else {
+			for k, v := range criteria {
+				m[k] = v
+			}
+		}
+		out[i] = m
+	}
+	return out, nil
+}
+
+func flattenAbpSite(site *AbpSite) (map[string]any, error) {
+	selectors, err := flattenAbpSelectors(site.Selectors, true)
+	if err != nil {
+		return nil, err
+	}
+
+	var defaultSelector []any
+	if site.DefaultSelector != nil {
+		defaultSelector, err = flattenAbpSelectors([]AbpSelector{*site.DefaultSelector}, false)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	m := map[string]any{
+		"id":               site.Id,
+		"account_id":       site.AccountId,
+		"name":             site.Name,
+		"selector":         selectors,
+		"default_selector": defaultSelector,
+		"created_at":       site.CreatedAt,
+		"modified_at":      site.ModifiedAt,
+	}
+	if site.DefaultMaxRequestsPerMinute != nil {
+		m["default_max_requests_per_minute"] = *site.DefaultMaxRequestsPerMinute
+	}
+	if site.DefaultMaxRequestsPerSession != nil {
+		m["default_max_requests_per_session"] = *site.DefaultMaxRequestsPerSession
+	}
+	if site.DefaultMaxSessionLength != nil {
+		m["default_max_session_length"] = *site.DefaultMaxSessionLength
+	}
+	return m, nil
+}
+
 func (c *Client) ListAbpSites(accountId string) ([]AbpSite, error) {
 	log.Printf("[INFO] Listing %ss in ABP account %s", abpSiteResourceName, accountId)
 

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -267,89 +269,18 @@ func extractAbpSite(data *schema.ResourceData) (AbpSite, error) {
 	return site, nil
 }
 
-func flattenAbpSelectors(selectors []AbpSelector, nestedKind bool) ([]any, error) {
-	out := make([]any, len(selectors))
-	for i, s := range selectors {
-		encoded, err := json.Marshal(s.AnalysisSettings)
-		if err != nil {
-			return nil, fmt.Errorf("encoding selector[%d].analysis_settings: %w", i, err)
-		}
-		m := map[string]any{
-			"id":                s.Id,
-			"analysis_settings": string(encoded),
-		}
-		if s.PolicyId != nil {
-			m["policy_id"] = *s.PolicyId
-		}
-
-		criteria := map[string]any{}
-		if s.Criteria.PathPrefix != nil {
-			criteria["path_prefix"] = *s.Criteria.PathPrefix
-		}
-		if s.Criteria.PathRegex != nil {
-			criteria["path_regex"] = *s.Criteria.PathRegex
-		}
-		if s.Criteria.Postback != nil {
-			criteria["postback"] = *s.Criteria.Postback
-		}
-		if nestedKind {
-			m["kind"] = []any{criteria}
-		} else {
-			for k, v := range criteria {
-				m[k] = v
-			}
-		}
-		out[i] = m
-	}
-	return out, nil
-}
-
 func serializeAbpSite(data *schema.ResourceData, site *AbpSite) error {
-	if err := data.Set("account_id", site.AccountId); err != nil {
-		return err
-	}
-	if err := data.Set("name", site.Name); err != nil {
-		return err
-	}
-	if site.DefaultMaxRequestsPerMinute != nil {
-		if err := data.Set("default_max_requests_per_minute", *site.DefaultMaxRequestsPerMinute); err != nil {
-			return err
-		}
-	}
-	if site.DefaultMaxRequestsPerSession != nil {
-		if err := data.Set("default_max_requests_per_session", *site.DefaultMaxRequestsPerSession); err != nil {
-			return err
-		}
-	}
-	if site.DefaultMaxSessionLength != nil {
-		if err := data.Set("default_max_session_length", *site.DefaultMaxSessionLength); err != nil {
-			return err
-		}
-	}
-	flat, err := flattenAbpSelectors(site.Selectors, true)
+	flat, err := flattenAbpSite(site)
 	if err != nil {
 		return err
 	}
-	if err := data.Set("selector", flat); err != nil {
-		return err
-	}
 
-	var flatDefault []any
-	if site.DefaultSelector != nil {
-		flatDefault, err = flattenAbpSelectors([]AbpSelector{*site.DefaultSelector}, false)
-		if err != nil {
-			return err
+	delete(flat, "id")
+
+	for _, key := range slices.Sorted(maps.Keys(flat)) {
+		if err := data.Set(key, flat[key]); err != nil {
+			return fmt.Errorf("setting %s: %w", key, err)
 		}
-	}
-	if err := data.Set("default_selector", flatDefault); err != nil {
-		return err
-	}
-
-	if err := data.Set("created_at", site.CreatedAt); err != nil {
-		return err
-	}
-	if err := data.Set("modified_at", site.ModifiedAt); err != nil {
-		return err
 	}
 	return nil
 }

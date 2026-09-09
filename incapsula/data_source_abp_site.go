@@ -2,6 +2,7 @@ package incapsula
 
 import (
 	"context"
+	"maps"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -9,6 +10,31 @@ import (
 )
 
 func dataSourceAbpSite() *schema.Resource {
+	siteSchema := map[string]*schema.Schema{
+		"account_id": {
+			Description:  "ABP account UUID to search within.",
+			Type:         schema.TypeString,
+			Required:     true,
+			ValidateFunc: validation.IsUUID,
+		},
+		"site_id": {
+			Description:  "ID of the Site to look up. One of (but not both) `site_id` or `name` is required.",
+			Type:         schema.TypeString,
+			Optional:     true,
+			Computed:     true,
+			ValidateFunc: validation.IsUUID,
+			AtLeastOneOf: []string{"site_id", "name"},
+		},
+		"name": {
+			Description:  "Name of the Site to look up. Matched exactly and case-sensitively. One of (but not both) `site_id` or `name` is required.",
+			Type:         schema.TypeString,
+			Optional:     true,
+			Computed:     true,
+			AtLeastOneOf: []string{"site_id", "name"},
+		},
+	}
+	maps.Copy(siteSchema, abpSiteReadOnlyAttributes())
+
 	return &schema.Resource{
 		ReadContext: dataSourceAbpSiteRead,
 
@@ -17,132 +43,119 @@ func dataSourceAbpSite() *schema.Resource {
 			"must be set. Use this to " +
 			"reference a Site that is not managed by this Terraform configuration, for " +
 			"example when building an `incapsula_abp_account_site_priority` list. The " +
-			"lookup fails if zero or more than one Site matches.",
+			"lookup fails if zero or more than one Site matches. Use " +
+			"`incapsula_abp_sites` to retrieve every Site of an account instead.",
 
-		Schema: map[string]*schema.Schema{
-			"account_id": {
-				Description:  "ABP account UUID to search within.",
-				Type:         schema.TypeString,
-				Required:     true,
-				ValidateFunc: validation.IsUUID,
-			},
-			"site_id": {
-				Description:  "ID of the Site to look up. One of (but not both) `site_id` or `name` is required.",
-				Type:         schema.TypeString,
-				Optional:     true,
-				Computed:     true,
-				ValidateFunc: validation.IsUUID,
-				AtLeastOneOf: []string{"site_id", "name"},
-			},
-			"name": {
-				Description:  "Name of the Site to look up. Matched exactly and case-sensitively. One of (but not both) `site_id` or `name` is required.",
-				Type:         schema.TypeString,
-				Optional:     true,
-				Computed:     true,
-				AtLeastOneOf: []string{"site_id", "name"},
-			},
-			"default_max_requests_per_minute": {
-				Description: "Default maximum number of requests without a token per minute.",
-				Type:        schema.TypeInt,
-				Computed:    true,
-			},
-			"default_max_requests_per_session": {
-				Description: "Default maximum number of requests without a token per session.",
-				Type:        schema.TypeInt,
-				Computed:    true,
-			},
-			"default_max_session_length": {
-				Description: "Default maximum length of a session without a token, in moi duration format.",
-				Type:        schema.TypeString,
-				Computed:    true,
-			},
-			"selector": {
-				Description: "Ordered list of user-defined Selectors for this Site.",
-				Type:        schema.TypeList,
-				Computed:    true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"id": {
-							Description: "Server-assigned Selector ID.",
-							Type:        schema.TypeString,
-							Computed:    true,
-						},
-						"policy_id": {
-							Description: "Policy applied when this Selector matches.",
-							Type:        schema.TypeString,
-							Computed:    true,
-						},
-						"kind": {
-							Description: "Match criteria for this Selector. Will be one of `path_prefix`, `path_regex`, `postback`",
-							Type:        schema.TypeList,
-							Computed:    true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"path_prefix": {
-										Description: "Matches requests whose path begins with this prefix. Mutually exclusive with `path_regex` and `postback`.",
-										Type:        schema.TypeString,
-										Computed:    true,
-									},
-									"path_regex": {
-										Description: "Matches requests whose path matches this regular expression. Mutually exclusive with `path_prefix` and `postback`.",
-										Type:        schema.TypeString,
-										Computed:    true,
-									},
-									"postback": {
-										Description: "Matches a specific Postback request type. One of: web_interrogation, ios_interrogation, web_automation, android_interrogation. Mutually exclusive with `path_prefix` and `path_regex`.",
-										Type:        schema.TypeString,
-										Computed:    true,
-									},
+		Schema: siteSchema,
+	}
+}
+
+// abpSiteReadOnlyAttributes returns the read-only Site attributes shared by the
+// `incapsula_abp_site` and `incapsula_abp_sites` data sources, keeping the two
+// in lockstep.
+func abpSiteReadOnlyAttributes() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"default_max_requests_per_minute": {
+			Description: "Default maximum number of requests without a token per minute.",
+			Type:        schema.TypeInt,
+			Computed:    true,
+		},
+		"default_max_requests_per_session": {
+			Description: "Default maximum number of requests without a token per session.",
+			Type:        schema.TypeInt,
+			Computed:    true,
+		},
+		"default_max_session_length": {
+			Description: "Default maximum length of a session without a token, in moi duration format.",
+			Type:        schema.TypeString,
+			Computed:    true,
+		},
+		"selector": {
+			Description: "Ordered list of user-defined Selectors for this Site.",
+			Type:        schema.TypeList,
+			Computed:    true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"id": {
+						Description: "Server-assigned Selector ID.",
+						Type:        schema.TypeString,
+						Computed:    true,
+					},
+					"policy_id": {
+						Description: "Policy applied when this Selector matches.",
+						Type:        schema.TypeString,
+						Computed:    true,
+					},
+					"kind": {
+						Description: "Match criteria for this Selector. Will be one of `path_prefix`, `path_regex`, `postback`",
+						Type:        schema.TypeList,
+						Computed:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"path_prefix": {
+									Description: "Matches requests whose path begins with this prefix. Mutually exclusive with `path_regex` and `postback`.",
+									Type:        schema.TypeString,
+									Computed:    true,
+								},
+								"path_regex": {
+									Description: "Matches requests whose path matches this regular expression. Mutually exclusive with `path_prefix` and `postback`.",
+									Type:        schema.TypeString,
+									Computed:    true,
+								},
+								"postback": {
+									Description: "Matches a specific Postback request type. One of: web_interrogation, ios_interrogation, web_automation, android_interrogation. Mutually exclusive with `path_prefix` and `path_regex`.",
+									Type:        schema.TypeString,
+									Computed:    true,
 								},
 							},
 						},
-						"analysis_settings": {
-							Description: "JSON-encoded analysis settings for this selector.",
-							Type:        schema.TypeString,
-							Computed:    true,
-						},
+					},
+					"analysis_settings": {
+						Description: "JSON-encoded analysis settings for this selector.",
+						Type:        schema.TypeString,
+						Computed:    true,
 					},
 				},
 			},
-			"default_selector": {
-				Description: "Catch-all selector matching all request paths after all other selectors.",
-				Type:        schema.TypeList,
-				Computed:    true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"id": {
-							Description: "Server-assigned Selector ID.",
-							Type:        schema.TypeString,
-							Computed:    true,
-						},
-						"policy_id": {
-							Description: "Default Policy applied when no user-defined selector matches.",
-							Type:        schema.TypeString,
-							Computed:    true,
-						},
-						"path_prefix": {
-							Description: "Always `/`.",
-							Type:        schema.TypeString,
-							Computed:    true,
-						},
-						"analysis_settings": {
-							Description: "JSON-encoded analysis settings of the default selector.",
-							Type:        schema.TypeString,
-							Computed:    true,
-						},
+		},
+		"default_selector": {
+			Description: "Catch-all selector matching all request paths after all other selectors.",
+			Type:        schema.TypeList,
+			Computed:    true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"id": {
+						Description: "Server-assigned Selector ID.",
+						Type:        schema.TypeString,
+						Computed:    true,
+					},
+					"policy_id": {
+						Description: "Default Policy applied when no user-defined selector matches.",
+						Type:        schema.TypeString,
+						Computed:    true,
+					},
+					"path_prefix": {
+						Description: "Always `/`.",
+						Type:        schema.TypeString,
+						Computed:    true,
+					},
+					"analysis_settings": {
+						Description: "JSON-encoded analysis settings of the default selector.",
+						Type:        schema.TypeString,
+						Computed:    true,
 					},
 				},
 			},
-			"created_at": {
-				Description: "RFC3339 timestamp at which the Site was created.",
-				Type:        schema.TypeString,
-				Computed:    true,
-			},
-			"modified_at": {
-				Description: "RFC3339 timestamp at which the Site was last modified.",
-				Type:        schema.TypeString,
-				Computed:    true,
-			},
+		},
+		"created_at": {
+			Description: "RFC3339 timestamp at which the Site was created.",
+			Type:        schema.TypeString,
+			Computed:    true,
+		},
+		"modified_at": {
+			Description: "RFC3339 timestamp at which the Site was last modified.",
+			Type:        schema.TypeString,
+			Computed:    true,
 		},
 	}
 }

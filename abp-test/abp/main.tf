@@ -249,6 +249,18 @@ resource "incapsula_abp_site" "sample_site" {
   }
 }
 
+data "incapsula_abp_sites" "all" {
+  account_id = var.account_id
+}
+
+resource "incapsula_abp_account_site_priority" "accprio" {
+  account_id = var.account_id
+  site_ids = concat(
+    [incapsula_abp_site.sample_site.id],
+    [for site in data.incapsula_abp_sites.all.sites : site.id if !contains([incapsula_abp_site.sample_site.id], site.id)],
+  )
+}
+
 #
 # Add a condition to the default policy
 #
@@ -388,7 +400,7 @@ resource "incapsula_abp_site" "site2" {
 
   selector {
     kind {
-      path_prefix       = "/login"
+      path_prefix     = "/login"
     }
     policy_id         = incapsula_abp_policy.policy2.id
     analysis_settings = data.incapsula_abp_site_analysis_settings.login.json
