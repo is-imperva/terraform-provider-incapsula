@@ -40,7 +40,8 @@ func dataSourceAbpSites() *schema.Resource {
 			"look up a single Site by `site_id` or `name` instead.\n\n" +
 			"Note: The time of reading this datasource is not defined by the terraform module. That means that" +
 			"the read is subject to race-conditions. If a site is created or deleted in the same plan as this " +
-			"datasource is read, it may yield unexpected results.",
+			"datasource is read, it may yield unexpected results. If deterministic operation is required, " +
+			"specify resource dependencies explicitly.",
 
 		Schema: map[string]*schema.Schema{
 			"account_id": {
