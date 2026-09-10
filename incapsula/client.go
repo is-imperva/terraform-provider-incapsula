@@ -88,9 +88,6 @@ func (c *Client) Verify() (*AccountStatusResponse, error) {
 	defer resp.Body.Close()
 	responseBody, err := ioutil.ReadAll(resp.Body)
 
-	// Dump JSON
-	log.Printf("[DEBUG] Successful test of API credentials.")
-
 	// Parse the JSON using the lightweight verify response
 	var accountVerifyResponse AccountVerifyResponse
 	err = json.Unmarshal([]byte(responseBody), &accountVerifyResponse)
@@ -110,6 +107,8 @@ func (c *Client) Verify() (*AccountStatusResponse, error) {
 	if resString != "0" {
 		return nil, fmt.Errorf("Error from Incapsula service when checking account: %s", string(responseBody))
 	}
+
+	log.Printf("[DEBUG] Successful test of API credentials.")
 
 	// Convert the lightweight verify response to AccountStatusResponse for backward compatibility
 	accountStatusResponse := &AccountStatusResponse{
@@ -134,6 +133,7 @@ func (c *Client) PostFormWithHeaders(url string, data url.Values, operation stri
 	}
 
 	SetHeaders(c, req, contentTypeApplicationUrlEncoded, operation, nil)
+
 	return c.executeRequest(req)
 }
 

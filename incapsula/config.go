@@ -34,7 +34,8 @@ type Config struct {
 	BaseURLAPI string
 
 	// Disable explicit API key verification step.
-	// Allows to run configuration against local/mock backends. Enabled by default
+	// Allows to run configuration against local/mock backends.
+	// Verification is enabled by default
 	DisableApiKeyVerification bool
 }
 

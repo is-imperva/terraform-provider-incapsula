@@ -94,7 +94,7 @@ func Provider() *schema.Provider {
 			"disable_api_key_verification": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("INCAPSULA_DISABLE_API_KEY_VERIFICATION", baseURLAPI),
+				DefaultFunc: schema.EnvDefaultFunc("INCAPSULA_DISABLE_API_KEY_VERIFICATION", false),
 				Description: descriptions["disable_api_key_verification"],
 			},
 		},
