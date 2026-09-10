@@ -19,11 +19,11 @@ type AbpCredential struct {
 }
 
 func (c *Client) abpCredentialAccountUrl(accountId string) string {
-	return fmt.Sprintf("%s/v1/account/%s/credential", c.config.BaseURLAPI, accountId)
+	return fmt.Sprintf("%s/botmanagement/v1/account/%s/credential", c.config.BaseURLAPI, accountId)
 }
 
 func (c *Client) abpCredentialUrl(credentialId string) string {
-	return fmt.Sprintf("%s/v1/credential/%s", c.config.BaseURLAPI, credentialId)
+	return fmt.Sprintf("%s/botmanagement/v1/credential/%s", c.config.BaseURLAPI, credentialId)
 }
 
 func (c *Client) CreateAbpCredential(accountId string) (*AbpCredential, error) {

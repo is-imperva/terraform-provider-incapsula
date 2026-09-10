@@ -15,7 +15,7 @@ type AbpRoot struct {
 }
 
 func (c *Client) abpRootUrl() string {
-	return fmt.Sprintf("%s/v1/", c.config.BaseURLAPI)
+	return fmt.Sprintf("%s/botmanagement/v1/", c.config.BaseURLAPI)
 }
 
 // ReadAbpAccountId looks up the ABP account ID belonging to the configured API credentials.

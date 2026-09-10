@@ -149,11 +149,11 @@ func (c AbpCondition) MarshalJSON() ([]byte, error) {
 }
 
 func (c *Client) abpConditionAccountUrl(accountId string) string {
-	return fmt.Sprintf("%s/v1/account/%s/condition", c.config.BaseURLAPI, accountId)
+	return fmt.Sprintf("%s/botmanagement/v1/account/%s/condition", c.config.BaseURLAPI, accountId)
 }
 
 func (c *Client) abpConditionUrl(conditionId string) string {
-	return fmt.Sprintf("%s/v1/condition/%s", c.config.BaseURLAPI, conditionId)
+	return fmt.Sprintf("%s/botmanagement/v1/condition/%s", c.config.BaseURLAPI, conditionId)
 }
 
 // ListAbpConditions returns every Condition visible from the given Account,

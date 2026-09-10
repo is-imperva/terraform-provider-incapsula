@@ -23,11 +23,11 @@ type abpDomainEncryptionKeyList struct {
 }
 
 func (c *Client) abpDomainEncryptionKeyDomainUrl(domainId string) string {
-	return fmt.Sprintf("%s/v1/domain/%s/encryptionkey", c.config.BaseURLAPI, domainId)
+	return fmt.Sprintf("%s/botmanagement/v1/domain/%s/encryptionkey", c.config.BaseURLAPI, domainId)
 }
 
 func (c *Client) abpDomainEncryptionKeyUrl(keyId string) string {
-	return fmt.Sprintf("%s/v1/encryptionkey/%s", c.config.BaseURLAPI, keyId)
+	return fmt.Sprintf("%s/botmanagement/v1/encryptionkey/%s", c.config.BaseURLAPI, keyId)
 }
 
 func (c *Client) CreateAbpDomainEncryptionKey(domainId string, key AbpDomainEncryptionKey) (*AbpDomainEncryptionKey, error) {
