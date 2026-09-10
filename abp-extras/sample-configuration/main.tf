@@ -6,15 +6,7 @@ terraform {
   }
 }
 
-provider "incapsula" {
-  api_key                      = "foo"
-  api_id                       = "bar"
-  base_url                     = "http://localhost:8081"
-  base_url_rev_2               = "http://localhost:8081"
-  base_url_rev_3               = "http://localhost:8081"
-  base_url_api                 = "http://localhost:8081"
-  disable_api_key_verification = true
-}
+provider "incapsula" {}
 
 // Look up account ID corresponding to the provided API key
 data "incapsula_abp_account" "current" {}
