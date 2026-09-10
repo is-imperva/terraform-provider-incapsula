@@ -33,10 +33,9 @@ type Config struct {
 	// Same as revision 2 but with a different subdomain
 	BaseURLAPI string
 
-	/// Temporary addition: don't validate client credentials when running terraform locally
-	// on lens.
-	// TODO: remove
-	ValidateClientCredentials bool
+	// Disable explicit API key verification step.
+	// Allows to run configuration against local/mock backends. Enabled by default
+	DisableApiKeyVerification bool
 }
 
 var missingAPIIDMessage = "API Identifier (api_id) must be provided"
@@ -84,7 +83,7 @@ func (c *Config) Client() (interface{}, error) {
 	client := NewClient(c)
 
 	// Verify client credentials
-	if c.ValidateClientCredentials {
+	if !c.DisableApiKeyVerification {
 		accountStatusResponse, err := client.Verify()
 		client.accountStatus = accountStatusResponse
 		if err != nil {
