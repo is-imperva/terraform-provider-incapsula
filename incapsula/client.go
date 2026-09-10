@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -39,30 +38,33 @@ func NewClient(config *Config) *Client {
 	return &Client{config: config, httpClient: client, providerVersion: "3.38.2"}
 }
 
-func (c *Client) CreateFormDataBody(bodyMap map[string]interface{}) ([]byte, string) {
+func (c *Client) CreateFormDataBody(bodyMap map[string]any) ([]byte, string) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
 	for key, value := range bodyMap {
-		switch value.(type) {
+		switch value := value.(type) {
 		case string:
 			fw, err := writer.CreateFormField(key)
 			if err != nil {
 				log.Printf("failed to create %s formdata field", key)
+				continue
 			}
-			_, err = io.Copy(fw, strings.NewReader(fmt.Sprintf("%v", value)))
-			break
+			_, _ = io.Copy(fw, strings.NewReader(value))
+
 		case []byte:
 			fw, err := writer.CreateFormFile(key, filepath.Base(key+".pfx")) //todo KATRIN try to remove .pfx
 			if err != nil {
 				log.Printf("failed to create %s formdata field", key)
+				continue
 			}
-			fw.Write(value.([]byte))
-			break
+			fw.Write(value)
+
 		default:
 			//throw error
 		}
 	}
+
 	writer.Close()
 
 	return body.Bytes(), writer.FormDataContentType()
@@ -86,7 +88,10 @@ func (c *Client) Verify() (*AccountStatusResponse, error) {
 
 	// Read the body
 	defer resp.Body.Close()
-	responseBody, err := ioutil.ReadAll(resp.Body)
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading account response: %w", err)
+	}
 
 	// Parse the JSON using the lightweight verify response
 	var accountVerifyResponse AccountVerifyResponse
@@ -220,10 +225,8 @@ func SetHeaders(c *Client, req *http.Request, contentType string, operation stri
 	req.Header.Set("x-tf-provider-ver", c.providerVersion)
 	req.Header.Set("x-tf-operation", operation)
 
-	if customHeaders != nil {
-		for name, value := range customHeaders {
-			req.Header.Set(name, value)
-		}
+	for name, value := range customHeaders {
+		req.Header.Set(name, value)
 	}
 }
 
