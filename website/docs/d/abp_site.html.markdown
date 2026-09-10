@@ -3,13 +3,13 @@ subcategory: "Advanced Bot Protection"
 layout: "incapsula"
 page_title: "incapsula_abp_site"
 description: |-
-  Looks up an existing ABP Site (a.k.a. Website Group) within an account by its site_id, or (XOR) its name. Exactly one of site_id or name must be set. Use this to reference a Site that is not managed by this Terraform configuration, for example when building an incapsula_abp_account_site_priority list. The lookup fails if zero or more than one Site matches.
+  Looks up an existing ABP Site (a.k.a. Website Group) within an account by its site_id, or (XOR) its name. Exactly one of site_id or name must be set. Use this to reference a Site that is not managed by this Terraform configuration, for example when building an incapsula_abp_account_site_priority list. The lookup fails if zero or more than one Site matches. Use incapsula_abp_sites to retrieve every Site of an account instead.
 ---
 
 
 # incapsula_abp_site
 
-Looks up an existing ABP Site (a.k.a. Website Group) within an account by its `site_id`, or (XOR) its `name`. Exactly one of `site_id` or `name` must be set. Use this to reference a Site that is not managed by this Terraform configuration, for example when building an `incapsula_abp_account_site_priority` list. The lookup fails if zero or more than one Site matches.
+Looks up an existing ABP Site (a.k.a. Website Group) within an account by its `site_id`, or (XOR) its `name`. Exactly one of `site_id` or `name` must be set. Use this to reference a Site that is not managed by this Terraform configuration, for example when building an `incapsula_abp_account_site_priority` list. The lookup fails if zero or more than one Site matches. Use `incapsula_abp_sites` to retrieve every Site of an account instead.
 
 ## Example Usage
 
@@ -64,7 +64,14 @@ Read-Only:
 
 - `analysis_settings` (String)
 - `id` (String)
+- `kind` (List of Object) (see [below for nested schema](#nestedobjatt--selector--kind))
+- `policy_id` (String)
+
+<a id="nestedobjatt--selector--kind"></a>
+### Nested Schema for `selector.kind`
+
+Read-Only:
+
 - `path_prefix` (String)
 - `path_regex` (String)
-- `policy_id` (String)
 - `postback` (String)
