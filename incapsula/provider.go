@@ -32,20 +32,17 @@ func init() {
 		"base_url_rev_3": "The base URL (revision 3) for API operations. Used for provider development.",
 
 		"base_url_api": "The base URL (same as v2 but with different subdomain) for API operations. Used for provider development.",
-
-		"disable_api_key_verification": "Disable explicit API key verification step before running the configuration.",
 	}
 }
 
 func providerConfigure(d *schema.ResourceData, terraformVersion string) (interface{}, error) {
 	config := Config{
-		APIID:                     d.Get("api_id").(string),
-		APIKey:                    d.Get("api_key").(string),
-		BaseURL:                   d.Get("base_url").(string),
-		BaseURLRev2:               d.Get("base_url_rev_2").(string),
-		BaseURLRev3:               d.Get("base_url_rev_3").(string),
-		BaseURLAPI:                d.Get("base_url_api").(string),
-		DisableApiKeyVerification: d.Get("disable_api_key_verification").(bool),
+		APIID:       d.Get("api_id").(string),
+		APIKey:      d.Get("api_key").(string),
+		BaseURL:     d.Get("base_url").(string),
+		BaseURLRev2: d.Get("base_url_rev_2").(string),
+		BaseURLRev3: d.Get("base_url_rev_3").(string),
+		BaseURLAPI:  d.Get("base_url_api").(string),
 	}
 
 	return config.Client()
@@ -90,12 +87,6 @@ func Provider() *schema.Provider {
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("INCAPSULA_BASE_URL_API", baseURLAPI),
 				Description: descriptions["base_url_api"],
-			},
-			"disable_api_key_verification": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("INCAPSULA_DISABLE_API_KEY_VERIFICATION", false),
-				Description: descriptions["disable_api_key_verification"],
 			},
 		},
 
