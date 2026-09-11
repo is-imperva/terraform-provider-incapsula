@@ -228,7 +228,7 @@ resource "incapsula_abp_site" "sample_site" {
 
   selector {
     kind {
-      path_prefix       = "/login"
+      path_prefix = "/login"
     }
     policy_id         = incapsula_abp_policy.policy2.id
     analysis_settings = data.incapsula_abp_site_analysis_settings.login.json
@@ -236,14 +236,14 @@ resource "incapsula_abp_site" "sample_site" {
 
   selector {
     kind {
-      path_regex        = "\\.png$"
+      path_regex = "\\.png$"
     }
     analysis_settings = data.incapsula_abp_site_analysis_settings.static.json
   }
 
   selector {
     kind {
-      postback          = "web_interrogation"
+      postback = "web_interrogation"
     }
     analysis_settings = data.incapsula_abp_site_analysis_settings.postback.json
   }
@@ -253,12 +253,17 @@ data "incapsula_abp_sites" "all" {
   account_id = var.account_id
 }
 
+locals {
+  managed_sites = [incapsula_abp_site.site2.id, incapsula_abp_site.sample_site.id]
+  prioritized_site_ids = concat(
+    local.managed_sites,
+    [for site in data.incapsula_abp_sites.all.sites : site.id if !contains(local.managed_sites, site.id)]
+  )
+}
+
 resource "incapsula_abp_account_site_priority" "accprio" {
   account_id = var.account_id
-  site_ids = concat(
-    [incapsula_abp_site.sample_site.id],
-    [for site in data.incapsula_abp_sites.all.sites : site.id if !contains([incapsula_abp_site.sample_site.id], site.id)],
-  )
+  site_ids   = local.prioritized_site_ids
 }
 
 #
@@ -400,7 +405,7 @@ resource "incapsula_abp_site" "site2" {
 
   selector {
     kind {
-      path_prefix     = "/login"
+      path_prefix = "/login"
     }
     policy_id         = incapsula_abp_policy.policy2.id
     analysis_settings = data.incapsula_abp_site_analysis_settings.login.json
