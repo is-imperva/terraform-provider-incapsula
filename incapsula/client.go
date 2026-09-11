@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
 const contentTypeApplicationUrlEncoded = "application/x-www-form-urlencoded"
