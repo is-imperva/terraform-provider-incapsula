@@ -255,15 +255,14 @@ data "incapsula_abp_sites" "all" {
 
 locals {
   managed_sites = [incapsula_abp_site.site2.id, incapsula_abp_site.sample_site.id]
-  prioritized_site_ids = concat(
-    local.managed_sites,
-    [for site in data.incapsula_abp_sites.all.sites : site.id if !contains(local.managed_sites, site.id)]
-  )
 }
 
 resource "incapsula_abp_account_site_priority" "accprio" {
   account_id = var.account_id
-  site_ids   = local.prioritized_site_ids
+  site_ids = concat(
+    local.managed_sites,
+    [for site in data.incapsula_abp_sites.all.sites : site.id if !contains(local.managed_sites, site.id)]
+  )
 }
 
 #
