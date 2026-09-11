@@ -33,8 +33,11 @@ resource "incapsula_abp_condition_list" "sample_condition_list" {
 ### Required
 
 - `account_id` (String) ABP account UUID this Condition List belongs to.
-- `description` (String) Description of the condition list.
 - `name` (String) Human-readable name of the condition list. 1..100 characters.
+
+### Optional
+
+- `description` (String) Description of the condition list. Optional: when omitted, the backend stores an empty/derived value which is reflected in state.
 
 ### Read-Only
 

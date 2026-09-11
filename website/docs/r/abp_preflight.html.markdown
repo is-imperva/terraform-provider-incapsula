@@ -46,7 +46,7 @@ resource "incapsula_abp_preflight" "current" {
 
 ### Required
 
-- `account_id` (String) The account this preflight belongs to.
+- `account_id` (String) ABP account UUID this preflight belongs to.
 
 ### Optional
 

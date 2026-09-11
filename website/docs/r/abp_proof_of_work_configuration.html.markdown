@@ -34,9 +34,12 @@ resource "incapsula_abp_proof_of_work_configuration" "pow1" {
 ### Required
 
 - `account_id` (String) ABP account UUID this Proof Of Work Configuration belongs to.
-- `algorithm` (String) Proof Of Work algorithm. One of: bbs, sha1.
 - `difficulty` (Number) Number of credits a client gets for completing a proof-of-work challenge. The amount of work performed by the client is proportional to this number. Must be >= 1.
 - `name` (String) Human-readable name of the Proof Of Work Configuration.
+
+### Optional
+
+- `algorithm` (String) Proof Of Work algorithm. One of: bbs, sha1. Optional: when omitted, the backend selects a default and that value is reflected in state.
 
 ### Read-Only
 

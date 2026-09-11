@@ -86,17 +86,25 @@ resource "incapsula_abp_site" "sample_site" {
 Required:
 
 - `analysis_settings` (String) JSON-encoded analysis settings for this selector, typically produced by an `incapsula_abp_site_analysis_settings` data source.
+- `kind` (Block List, Min: 1, Max: 1) Match criteria for this Selector. Exactly one of `path_prefix`, `path_regex`, `postback` must be set. (see [below for nested schema](#nestedblock--selector--kind))
+
+Optional:
+
+- `policy_id` (String) Policy applied when this Selector matches. Omit to apply no policy (e.g. for static assets).
+
+Read-Only:
+
+- `id` (String) Server-assigned Selector ID.
+
+<a id="nestedblock--selector--kind"></a>
+### Nested Schema for `selector.kind`
 
 Optional:
 
 - `path_prefix` (String) Match requests whose path begins with this prefix. Mutually exclusive with `path_regex` and `postback`.
 - `path_regex` (String) Match requests whose path matches this regular expression. Mutually exclusive with `path_prefix` and `postback`.
-- `policy_id` (String) Policy applied when this Selector matches. Omit to apply no policy (e.g. for static assets).
 - `postback` (String) Match a specific Postback request type. One of: web_interrogation, ios_interrogation, web_automation, android_interrogation. Mutually exclusive with `path_prefix` and `path_regex`.
 
-Read-Only:
-
-- `id` (String) Server-assigned Selector ID.
 
 
 <a id="nestedatt--default_selector"></a>

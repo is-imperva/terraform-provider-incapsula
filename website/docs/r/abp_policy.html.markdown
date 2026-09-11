@@ -62,12 +62,12 @@ resource "incapsula_abp_policy" "policy_with_custom_directives" {
 
 ### Required
 
-- `account_id` (String) The account this policy belongs to.
+- `account_id` (String) ABP account UUID this Policy belongs to.
+- `description` (String) Description of the policy. Set to empty string if omitted
 - `name` (String) Policy name. 1..100 characters.
 
 ### Optional
 
-- `description` (String) Optional policy description.
 - `directive` (Block List) Ordered list of directives evaluated top-down for this policy. A policy must have at least one directive. Computed when `use_standard_directives` is true; otherwise required. (see [below for nested schema](#nestedblock--directive))
 - `use_standard_directives` (Boolean) If true, the policy is created with the standard set of directives (matching the ABP UI's "Standard Directives" choice). When set, custom `directive` blocks must not be specified.
 
