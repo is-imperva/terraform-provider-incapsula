@@ -166,7 +166,7 @@ func extractAccount(data *schema.ResourceData) (AbpTerraformAccount, diag.Diagno
 			diags = append(diags, diag.Diagnostic{
 				Severity: diag.Error,
 				Summary:  fmt.Sprintf("Found duplicate identifier (%s) for website group", nameId),
-				Detail:   fmt.Sprintf("Identifiers must be unique per website group. If you need duplicate `name`s you may specify `name_id` with an unique identifier"),
+				Detail:   "Identifiers must be unique per website group. If you need duplicate `name`s you may specify `name_id` with an unique identifier",
 			})
 		}
 		usedNames[nameId] = true
@@ -192,7 +192,7 @@ func extractAccount(data *schema.ResourceData) (AbpTerraformAccount, diag.Diagno
 				diags = append(diags, diag.Diagnostic{
 					Severity: diag.Error,
 					Summary:  fmt.Sprintf("Found duplicate incapsula_site_id (%d) for website", incapsulaSiteId),
-					Detail:   fmt.Sprintf("Each incapsula_site can only be used by a single website"),
+					Detail:   "Each incapsula_site can only be used by a single website",
 				})
 			} else {
 				siteIdToId[incapsulaSiteId] = website["id"].(string)
@@ -206,7 +206,7 @@ func extractAccount(data *schema.ResourceData) (AbpTerraformAccount, diag.Diagno
 
 	autoPublish := data.Get("auto_publish").(bool)
 
-	websiteGroups := make([]AbpTerraformWebsiteGroup, 0, 0)
+	websiteGroups := make([]AbpTerraformWebsiteGroup, 0)
 	for _, websiteGroup := range newWebsiteGroup.([]interface{}) {
 		websiteGroup := websiteGroup.(map[string]interface{})
 
@@ -292,12 +292,12 @@ func setUniqueNameIds(account *AbpTerraformAccount) {
 
 func serializeAccount(data *schema.ResourceData, account AbpTerraformAccount) {
 
-	websiteGroupsData := make([]interface{}, len(account.WebsiteGroups), len(account.WebsiteGroups))
+	websiteGroupsData := make([]interface{}, len(account.WebsiteGroups))
 	oldWebsiteGroups := data.Get("website_group").([]interface{})
 	for i, websiteGroup := range account.WebsiteGroups {
 		websiteGroupData := make(map[string]interface{})
 
-		websitesData := make([]interface{}, len(websiteGroup.Websites), len(websiteGroup.Websites))
+		websitesData := make([]interface{}, len(websiteGroup.Websites))
 		for j, website := range websiteGroup.Websites {
 			websiteData := make(map[string]interface{})
 

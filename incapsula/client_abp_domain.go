@@ -254,11 +254,11 @@ func (p *AbpNoJsInjectionPath) UnmarshalJSON(data []byte) error {
 }
 
 func (c *Client) abpDomainAccountUrl(accountId string) string {
-	return fmt.Sprintf("%s/v1/account/%s/domain", c.config.BaseURLAPI, accountId)
+	return fmt.Sprintf("%s/botmanagement/v1/account/%s/domain", c.config.BaseURLAPI, accountId)
 }
 
 func (c *Client) abpDomainUrl(domainId string) string {
-	return fmt.Sprintf("%s/v1/domain/%s", c.config.BaseURLAPI, domainId)
+	return fmt.Sprintf("%s/botmanagement/v1/domain/%s", c.config.BaseURLAPI, domainId)
 }
 
 func (c *Client) CreateAbpDomain(accountId string, domain AbpDomain) (*AbpDomain, error) {

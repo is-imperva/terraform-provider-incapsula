@@ -6,32 +6,17 @@ terraform {
   }
 }
 
-provider "incapsula" {
-  api_key        = "foo"
-  api_id         = "bar"
-  base_url       = "http://localhost:8081"
-  base_url_rev_2 = "http://localhost:8081"
-  base_url_rev_3 = "http://localhost:8081"
-  base_url_api   = "http://localhost:8081"
-}
+provider "incapsula" {}
 
-# To avoid conflicts:
-# - create file `vars.auto.tfvars` containing
-# ```
-# account_id = "<your account id>"
-# ```
-#
-# It will be automatically loaded during `terraform apply`
-variable "account_id" {
-  type = string
-}
+// Look up account ID corresponding to the provided API key
+data "incapsula_abp_account" "current" {}
 
 # All configuration put in a separate module so it can be referenced as
 # a dependency for the publishing part. When any resource in the module
 # changes its state publishing will be triggered
 module "abp" {
   source     = "./abp"
-  account_id = var.account_id
+  account_id = data.incapsula_abp_account.current.id
 }
 
 data "incapsula_abp_pending_changes" "current" {
@@ -40,7 +25,7 @@ data "incapsula_abp_pending_changes" "current" {
 
 # Create a preflight (a snapshot of the configuration)
 resource "incapsula_abp_preflight" "current" {
-  account_id   = var.account_id
+  account_id   = data.incapsula_abp_account.current.id
   pending_hash = data.incapsula_abp_pending_changes.current.hash
 }
 

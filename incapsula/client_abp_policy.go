@@ -9,11 +9,11 @@ import (
 )
 
 func (c *Client) AbpPolicyUrl(policyId string) string {
-	return fmt.Sprintf("%s/v1/policy/%s", c.config.BaseURLAPI, policyId)
+	return fmt.Sprintf("%s/botmanagement/v1/policy/%s", c.config.BaseURLAPI, policyId)
 }
 
 func (c *Client) AbpPolicyCreateUrl(accountId string) string {
-	return fmt.Sprintf("%s/v1/account/%s/policy", c.config.BaseURLAPI, accountId)
+	return fmt.Sprintf("%s/botmanagement/v1/account/%s/policy", c.config.BaseURLAPI, accountId)
 }
 
 const abpPolicyResourceName = "ABP Policy"
@@ -143,7 +143,7 @@ func (c *Client) ReadAbpPolicy(policyId string) (*AbpPolicy, error) {
 }
 
 func (c *Client) AbpAccountGlobalPolicyUrl(accountId string) string {
-	return fmt.Sprintf("%s/v1/account/%s/global_policy", c.config.BaseURLAPI, accountId)
+	return fmt.Sprintf("%s/botmanagement/v1/account/%s/global_policy", c.config.BaseURLAPI, accountId)
 }
 
 // ReadAbpAccountGlobalPolicy fetches the account global policy. If the account does

@@ -98,6 +98,7 @@ func Provider() *schema.Provider {
 			"incapsula_account_permissions":             dataSourceAccountPermissions(),
 			"incapsula_account_roles":                   dataSourceAccountRoles(),
 			"incapsula_ssl_instructions":                dataSourceSSLInstructions(),
+			"incapsula_abp_account":                     dataSourceAbpAccount(),
 			"incapsula_abp_pending_changes":             dataSourceAbpPendingChanges(),
 			"incapsula_abp_proof_of_work_configuration": dataSourceAbpProofOfWorkConfiguration(),
 			"incapsula_abp_site_analysis_settings":      dataSourceAbpSiteAnalysisSettings(),

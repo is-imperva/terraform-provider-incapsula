@@ -21,11 +21,11 @@ type AbpProofOfWorkConfiguration struct {
 }
 
 func (c *Client) abpProofOfWorkConfigurationAccountUrl(accountId string) string {
-	return fmt.Sprintf("%s/v1/account/%s/proof_of_work_configuration", c.config.BaseURLAPI, accountId)
+	return fmt.Sprintf("%s/botmanagement/v1/account/%s/proof_of_work_configuration", c.config.BaseURLAPI, accountId)
 }
 
 func (c *Client) abpProofOfWorkConfigurationUrl(id string) string {
-	return fmt.Sprintf("%s/v1/proof_of_work_configuration/%s", c.config.BaseURLAPI, id)
+	return fmt.Sprintf("%s/botmanagement/v1/proof_of_work_configuration/%s", c.config.BaseURLAPI, id)
 }
 
 func (c *Client) ListAbpProofOfWorkConfigurations(accountId string) ([]AbpProofOfWorkConfiguration, error) {

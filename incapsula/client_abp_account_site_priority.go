@@ -15,7 +15,7 @@ type AbpAccountSitePriority struct {
 }
 
 func (c *Client) abpAccountSitePriorityUrl(accountId string) string {
-	return fmt.Sprintf("%s/v1/account/%s/site_priority", c.config.BaseURLAPI, accountId)
+	return fmt.Sprintf("%s/botmanagement/v1/account/%s/site_priority", c.config.BaseURLAPI, accountId)
 }
 
 func (c *Client) ReadAbpAccountSitePriority(accountId string) (*AbpAccountSitePriority, error) {

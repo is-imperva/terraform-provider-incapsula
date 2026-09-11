@@ -95,11 +95,11 @@ func (r *AbpRateLimiting) UnmarshalJSON(data []byte) error {
 }
 
 func (c *Client) abpSiteAccountUrl(accountId string) string {
-	return fmt.Sprintf("%s/v1/account/%s/site", c.config.BaseURLAPI, accountId)
+	return fmt.Sprintf("%s/botmanagement/v1/account/%s/site", c.config.BaseURLAPI, accountId)
 }
 
 func (c *Client) abpSiteUrl(siteId string) string {
-	return fmt.Sprintf("%s/v1/site/%s", c.config.BaseURLAPI, siteId)
+	return fmt.Sprintf("%s/botmanagement/v1/site/%s", c.config.BaseURLAPI, siteId)
 }
 
 func isDefaultSelectorShape(s AbpSelector) bool {

@@ -15,7 +15,7 @@ type AbpSiteDomainPriority struct {
 }
 
 func (c *Client) abpSiteDomainPriorityUrl(siteId string) string {
-	return fmt.Sprintf("%s/v1/site/%s/domain_priority", c.config.BaseURLAPI, siteId)
+	return fmt.Sprintf("%s/botmanagement/v1/site/%s/domain_priority", c.config.BaseURLAPI, siteId)
 }
 
 func (c *Client) ReadAbpSiteDomainPriority(siteId string) (*AbpSiteDomainPriority, error) {

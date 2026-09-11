@@ -21,15 +21,15 @@ type AbpPreflight struct {
 }
 
 func (c *Client) AbpAccountPreflightUrl(accountId string) string {
-	return fmt.Sprintf("%s/v1/account/%s/preflight", c.config.BaseURLAPI, accountId)
+	return fmt.Sprintf("%s/botmanagement/v1/account/%s/preflight", c.config.BaseURLAPI, accountId)
 }
 
 func (c *Client) AbpPreflightStatusUrl(preflightId string) string {
-	return fmt.Sprintf("%s/v1/preflight/%s/status", c.config.BaseURLAPI, preflightId)
+	return fmt.Sprintf("%s/botmanagement/v1/preflight/%s/status", c.config.BaseURLAPI, preflightId)
 }
 
 func (c *Client) AbpPreflightPublishUrl(preflightId string) string {
-	return fmt.Sprintf("%s/v1/preflight/%s/publish", c.config.BaseURLAPI, preflightId)
+	return fmt.Sprintf("%s/botmanagement/v1/preflight/%s/publish", c.config.BaseURLAPI, preflightId)
 }
 
 const getPreflightStatusAction = "reading preflight status"
