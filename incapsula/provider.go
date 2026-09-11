@@ -130,7 +130,6 @@ func Provider() *schema.Provider {
 			"incapsula_waf_security_rule":                                      resourceWAFSecurityRule(),
 			"incapsula_account":                                                resourceAccount(),
 			"incapsula_subaccount":                                             resourceSubAccount(),
-			"incapsula_waf_log_setup":                                          resourceWAFLogSetup(),
 			"incapsula_txt_record":                                             resourceTXTRecord(),
 			"incapsula_data_centers_configuration":                             resourceDataCentersConfiguration(),
 			"incapsula_api_security_site_config":                               resourceApiSecuritySiteConfig(),
@@ -181,6 +180,9 @@ func Provider() *schema.Provider {
 			"incapsula_site_cache_configuration":                               resourceSiteCacheConfiguration(),
 			"incapsula_short_renewal_cycle":                                    resourceShortRenewalCycle(),
 			"incapsula_api_client":                                             resourceApiClient(),
+			"incapsula_ai_application_security_application":                    resourceAiApplicationSecurityApplication(),
+			"incapsula_ai_application_security_policy":                         resourceAiApplicationSecurityPolicy(),
+			"incapsula_ai_application_security_api_key":                        resourceAiApplicationSecurityApiKey(),
 		},
 	}
 

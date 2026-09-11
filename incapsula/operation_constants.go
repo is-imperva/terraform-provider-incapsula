@@ -30,11 +30,6 @@ const CreateSubAccount = "create_sub_account"
 const ReadSubAccount = "read_sub_account"
 const DeleteSubAccount = "delete_sub_account"
 
-const CreateWAFLogSetup = "create_waf_log_setup"
-const DeleteWAFLogSetup = "delete_waf_log_setup"
-const ActivateWAFLogSetup = "activate_waf_log_setup"
-const UpdateStatusWAFLogSetup = "update_status_waf_log_setup"
-
 const ReadAccountDataStorageRegion = "read_account_data_storage_region"
 const UpdateAccountDataStorageRegion = "update_account_data_storage_region"
 
@@ -271,5 +266,18 @@ const DeleteApiClient = "delete_api_client"
 
 const CreateCloudOriginDomain = "create_cloud_origin_domain"
 const ReadCloudOriginDomain = "read_cloud_origin_domain"
-const UpdateCloudOriginDomain = "update_cloud_origin_domain"
 const DeleteCloudOriginDomain = "delete_cloud_origin_domain"
+
+const CreateAiApplicationSecurityApplication = "create_ai_application_security_application"
+const ReadAiApplicationSecurityApplication = "read_ai_application_security_application"
+const UpdateAiApplicationSecurityApplication = "update_ai_application_security_application"
+const DeleteAiApplicationSecurityApplication = "delete_ai_application_security_application"
+
+const CreateAiApplicationSecurityPolicy = "create_ai_application_security_policy"
+const ReadAiApplicationSecurityPolicy = "read_ai_application_security_policy"
+const UpdateAiApplicationSecurityPolicy = "update_ai_application_security_policy"
+const DeleteAiApplicationSecurityPolicy = "delete_ai_application_security_policy"
+
+const CreateAiApplicationSecurityApiKey = "create_ai_application_security_api_key"
+const ReadAiApplicationSecurityApiKey = "read_ai_application_security_api_key"
+const DeleteAiApplicationSecurityApiKey = "delete_ai_application_security_api_key"

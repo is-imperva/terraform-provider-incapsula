@@ -37,9 +37,21 @@ type MockImpervaServer struct {
 	// CSP domain storage: map[siteID]map[domain]*MockCSPDomain
 	cspDomains map[int]map[string]*MockCSPDomain
 
+	// AI Application Security application storage: map[applicationId]*MockAiApplicationSecurityApplication
+	aiApplicationSecurityApplications map[string]*MockAiApplicationSecurityApplication
+
+	// AI Application Security policy storage: map[policyId]*MockAiApplicationSecurityPolicy
+	aiApplicationSecurityPolicies map[string]*MockAiApplicationSecurityPolicy
+
+	// AI Application Security API key storage: map[apiKeyId]*MockAiApplicationSecurityApiKey
+	aiApplicationSecurityApiKeys map[int64]*MockAiApplicationSecurityApiKey
+
 	// ID generators
-	nextAccountID int
-	nextSiteID    int
+	nextAccountID                     int
+	nextSiteID                        int
+	nextAiApplicationSecurityAppID    int
+	nextAiApplicationSecurityPolicyID int
+	nextAiApplicationSecurityApiKeyID int64
 }
 
 // MockAccount represents an account in the mock server
@@ -107,11 +119,17 @@ type MockCSPStatus struct {
 // NewMockImpervaServer creates a new mock server instance
 func NewMockImpervaServer() *MockImpervaServer {
 	mock := &MockImpervaServer{
-		accounts:      make(map[int]*MockAccount),
-		sites:         make(map[int]*MockSite),
-		cspDomains:    make(map[int]map[string]*MockCSPDomain),
-		nextAccountID: 1000,
-		nextSiteID:    10000,
+		accounts:                          make(map[int]*MockAccount),
+		sites:                             make(map[int]*MockSite),
+		cspDomains:                        make(map[int]map[string]*MockCSPDomain),
+		aiApplicationSecurityApplications: make(map[string]*MockAiApplicationSecurityApplication),
+		aiApplicationSecurityPolicies:     make(map[string]*MockAiApplicationSecurityPolicy),
+		aiApplicationSecurityApiKeys:      make(map[int64]*MockAiApplicationSecurityApiKey),
+		nextAccountID:                     1000,
+		nextSiteID:                        10000,
+		nextAiApplicationSecurityAppID:    1,
+		nextAiApplicationSecurityPolicyID: 1,
+		nextAiApplicationSecurityApiKeyID: 1,
 	}
 
 	// Create the HTTP server with the router
@@ -141,6 +159,11 @@ func (m *MockImpervaServer) router(w http.ResponseWriter, r *http.Request) {
 
 	// Remove leading slash for matching
 	path = strings.TrimPrefix(path, "/")
+
+	// AI Application Security endpoints are served under the /ai-application-security base path
+	// that the client prepends to BaseURLAPI; strip it so the matching below is
+	// prefix-agnostic (the bare mock base URL carries no such segment for other APIs).
+	path = strings.TrimPrefix(path, "ai-application-security/")
 
 	// Account endpoints
 	switch {
@@ -172,6 +195,21 @@ func (m *MockImpervaServer) router(w http.ResponseWriter, r *http.Request) {
 	// CSP API endpoints
 	case strings.HasPrefix(path, "csp-api/v1/sites/"):
 		m.handleCSPAPI(w, r, path)
+
+	// AI Application Security policy endpoints (/v3/applications/{applicationId}/policies[/{policyId}]).
+	// Matched before the application endpoints and tolerant of the "/ai-application-security"
+	// prefix the client prepends to the mock base URL.
+	case strings.Contains(path, "v3/applications/") && strings.Contains(path, "/policies"):
+		m.handleAiApplicationSecurityPolicies(w, r, path)
+
+	// AI Application Security API key endpoints: account-level list (v3/api-keys) and the
+	// application-scoped create/delete paths (v3/applications/{id}/api-keys[/{id}]).
+	case path == "v3/api-keys" || (strings.Contains(path, "v3/applications/") && strings.Contains(path, "/api-keys")):
+		m.handleAiApplicationSecurityApiKeys(w, r, path)
+
+	// AI Application Security application endpoints (/v3/api/applications)
+	case path == "v3/api/applications" || strings.HasPrefix(path, "v3/api/applications/"):
+		m.handleAiApplicationSecurityApplications(w, r, path)
 
 	default:
 		// Return 404 for unimplemented endpoints
@@ -718,12 +756,13 @@ func (m *MockImpervaServer) handleCSPGetDomain(w http.ResponseWriter, siteID int
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	domain := m.decodeDomainRef(domainRef)
-	if domain == "" {
+	decoded := m.decodeDomainRef(domainRef)
+	if decoded == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		m.writeErrorResponse(w, 400, "Invalid domain reference")
 		return
 	}
+	bareDomain := strings.TrimPrefix(decoded, "*.")
 
 	siteDomains, exists := m.cspDomains[siteID]
 	if !exists {
@@ -732,8 +771,8 @@ func (m *MockImpervaServer) handleCSPGetDomain(w http.ResponseWriter, siteID int
 		return
 	}
 
-	cspDomain, exists := siteDomains[domain]
-	if !exists {
+	cspDomain, exists := siteDomains[bareDomain]
+	if !exists || cspDomain.ReferenceID != domainRef {
 		w.WriteHeader(http.StatusNotFound)
 		m.writeErrorResponse(w, 404, "Domain not found")
 		return
@@ -777,7 +816,11 @@ func (m *MockImpervaServer) handleCSPAddDomain(w http.ResponseWriter, r *http.Re
 		m.cspDomains[siteID] = make(map[string]*MockCSPDomain)
 	}
 
-	refID := base64.RawURLEncoding.EncodeToString([]byte(domainReq.Domain))
+	domainForRef := domainReq.Domain
+	if domainReq.Subdomains {
+		domainForRef = "*." + domainReq.Domain
+	}
+	refID := base64.RawURLEncoding.EncodeToString([]byte(domainForRef))
 	cspDomain := &MockCSPDomain{
 		Domain:                   domainReq.Domain,
 		Subdomains:               domainReq.Subdomains,
@@ -803,27 +846,16 @@ func (m *MockImpervaServer) handleCSPDeleteDomain(w http.ResponseWriter, siteID 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	domain := m.decodeDomainRef(domainRef)
-	if domain == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		m.writeErrorResponse(w, 400, "Invalid domain reference")
-		return
+	// Always 204 (idempotent); only removes the entry when the ref matches exactly.
+	decoded := m.decodeDomainRef(domainRef)
+	if decoded != "" {
+		bareDomain := strings.TrimPrefix(decoded, "*.")
+		if siteDomains, ok := m.cspDomains[siteID]; ok {
+			if entry, ok := siteDomains[bareDomain]; ok && entry.ReferenceID == domainRef {
+				delete(siteDomains, bareDomain)
+			}
+		}
 	}
-
-	siteDomains, exists := m.cspDomains[siteID]
-	if !exists {
-		w.WriteHeader(http.StatusNotFound)
-		m.writeErrorResponse(w, 404, "Site not found")
-		return
-	}
-
-	if _, exists := siteDomains[domain]; !exists {
-		w.WriteHeader(http.StatusNotFound)
-		m.writeErrorResponse(w, 404, "Domain not found")
-		return
-	}
-
-	delete(siteDomains, domain)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -1158,7 +1190,11 @@ func (m *MockImpervaServer) AddCSPDomain(siteID int, domain *MockCSPDomain) {
 		m.cspDomains[siteID] = make(map[string]*MockCSPDomain)
 	}
 	if domain.ReferenceID == "" {
-		domain.ReferenceID = base64.RawURLEncoding.EncodeToString([]byte(domain.Domain))
+		domainForRef := domain.Domain
+		if domain.Subdomains {
+			domainForRef = "*." + domain.Domain
+		}
+		domain.ReferenceID = base64.RawURLEncoding.EncodeToString([]byte(domainForRef))
 	}
 	m.cspDomains[siteID][domain.Domain] = domain
 }

@@ -1,3 +1,36 @@
+## 3.39.3 (Aug 19, 2026)
+
+BUT FIXES:
+- Fix cloud origin resource url ([#675](https://github.com/imperva/terraform-provider-incapsula/pull/675))
+
+
+## 3.39.2 (Aug 13, 2026)
+
+BUT FIXES:
+- Revert fix for: Occasional 401 error when creating domains ([#672](https://github.com/imperva/terraform-provider-incapsula/pull/672))
+
+## 3.39.1 (Aug 11, 2026)
+
+BUT FIXES:
+- Rename field from originTlsPolicy to originSslProtocol for cloud origin resource ([#668](https://github.com/imperva/terraform-provider-incapsula/pull/668))
+
+
+## 3.39.0 (Jul 22, 2026)
+
+FEATURES:
+* **New Resource:** `incapsula_cloud_origin_domain`
+
+BUT FIXES:
+- fix: Add retry with exponential backoff for transient API failures ([#663](https://github.com/imperva/terraform-provider-incapsula/pull/663))
+
+
+## 3.38.3 (Jun 1, 2026)
+
+BUT FIXES:
+- Show Error properly when creation of a site with WC as primary domain fails ([#644](https://github.com/imperva/terraform-provider-incapsula/pull/644))
+- Verify the API credentials using the lightweight verify endpoint issue ([#646](https://github.com/imperva/terraform-provider-incapsula/pull/646))
+
+
 ## 3.38.2 (May 3, 2026)
 
 BUT FIXES:
