@@ -120,19 +120,27 @@ not share an ` + "`action`" + `.`,
 // duplicates would make it impossible to tell which backend-owned condition
 // list belongs to which directive. They are also unaddressable through the
 // incapsula_abp_directive data source.
+//
+// Actions that are still unknown at plan time are skipped: Terraform re-plans
+// every instance just before applying it, with the configuration fully
+// resolved, so a duplicate hidden behind an unknown is caught then.
 func resourceAbpPolicyCustomizeDiff(ctx context.Context, diff *schema.ResourceDiff, m any) error {
 	raw, ok := diff.Get("directive").([]any)
 	if !ok {
 		return nil
 	}
 	seen := make(map[string]bool, len(raw))
-	for _, item := range raw {
+	for i, item := range raw {
 		directive, ok := item.(map[string]any)
 		if !ok {
 			continue
 		}
+		if !diff.NewValueKnown(fmt.Sprintf("directive.%d.action", i)) {
+			continue
+		}
 		action, _ := directive["action"].(string)
-		// An action that is not known yet during plan reads as empty.
+		// Required and non-empty by validation; guards a nested object that
+		// carries no action at all.
 		if action == "" {
 			continue
 		}
