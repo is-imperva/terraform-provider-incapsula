@@ -9,6 +9,10 @@ description: |-
   All directive blocks must be specified explicitly. Each directive exposes a
   condition_list_id to which conditions are attached via
   incapsula_abp_condition_list_entry.
+  A directive is identified by its action, which is how the backend-owned
+  condition lists are kept attached to the right directive when directives are
+  added, removed or reordered. Two directives in the same policy therefore must
+  not share an action.
 ---
 
 
@@ -21,6 +25,11 @@ to traffic that a Site's selector maps to this Policy.
 All `directive` blocks must be specified explicitly. Each directive exposes a
 `condition_list_id` to which conditions are attached via
 `incapsula_abp_condition_list_entry`.
+
+A directive is identified by its `action`, which is how the backend-owned
+condition lists are kept attached to the right directive when directives are
+added, removed or reordered. Two directives in the same policy therefore must
+not share an `action`.
 
 ## Example Usage
 
@@ -54,7 +63,7 @@ resource "incapsula_abp_policy" "policy_with_custom_directives" {
 
 - `account_id` (String) ABP account UUID this Policy belongs to.
 - `description` (String) Description of the policy. Set to empty string if omitted
-- `directive` (Block List, Min: 1) Ordered list of directives evaluated top-down for this policy. A policy must have at least one directive. (see [below for nested schema](#nestedblock--directive))
+- `directive` (Block List, Min: 1) Ordered list of directives evaluated top-down for this policy. A policy must have at least one directive, and no two directives may share an `action`. (see [below for nested schema](#nestedblock--directive))
 - `name` (String) Policy name. 1..100 characters.
 
 ### Read-Only
