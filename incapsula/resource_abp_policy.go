@@ -78,9 +78,10 @@ not share an ` + "`action`" + `.`,
 				ValidateFunc: validation.All(validation.StringLenBetween(1, 100), validateAbpPolicyName),
 			},
 			"description": {
-				Description: "Description of the policy. Set to empty string if omitted",
-				Type:        schema.TypeString,
-				Required:    true,
+				Description: "Description of the policy. Optional: the API stores no description " +
+					"when it is omitted, which is reflected in state as the empty string.",
+				Type:     schema.TypeString,
+				Optional: true,
 			},
 			"directive": {
 				Description: "Ordered list of directives evaluated top-down for this policy. A policy must have at least one directive, and no two directives may share an `action`.",
@@ -206,13 +207,21 @@ func resourceAbpPolicyCustomizeDiff(ctx context.Context, diff *schema.ResourceDi
 	return nil
 }
 
+// extractAbpPolicy builds the request body from the configuration. An omitted
+// description reaches here as the empty string, which is left out of the
+// request so the API stores no description at all (`description` is
+// `Option<String>` in both CreatePolicyV1 and UpdatePolicyV1, and an update
+// that omits it clears it). The value read back is normalised to the empty
+// string again by serializeAbpPolicy, so this round-trips without drift.
 func extractAbpPolicy(data *schema.ResourceData) AbpPolicy {
-	description := data.Get("description").(string)
-	return AbpPolicy{
-		Name:        data.Get("name").(string),
-		Description: &description,
-		Directives:  extractAbpDirectives(data),
+	policy := AbpPolicy{
+		Name:       data.Get("name").(string),
+		Directives: extractAbpDirectives(data),
 	}
+	if description := data.Get("description").(string); description != "" {
+		policy.Description = &description
+	}
+	return policy
 }
 
 // abpConditionLists holds the condition lists the backend has allocated for a
@@ -319,14 +328,12 @@ func serializeAbpPolicy(data *schema.ResourceData, policy *AbpPolicy) error {
 	if err := data.Set("name", policy.Name); err != nil {
 		return err
 	}
+	description := ""
 	if policy.Description != nil {
-		if err := data.Set("description", policy.Description); err != nil {
-			return err
-		}
-	} else {
-		if err := data.Set("description", ""); err != nil {
-			return err
-		}
+		description = *policy.Description
+	}
+	if err := data.Set("description", description); err != nil {
+		return err
 	}
 	if err := data.Set("directive", flattenAbpDirectives(policy.Directives)); err != nil {
 		return err
