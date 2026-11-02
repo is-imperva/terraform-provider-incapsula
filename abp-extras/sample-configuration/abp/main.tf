@@ -110,10 +110,7 @@ resource "incapsula_abp_policy" "policy1" {
 }
 
 # Demonstrate referencing a directive by action with the `incapsula_abp_directive` data source.
-# Both this and the `locals` map shown for `policy2` below address directives by action and are
-# preferred over `incapsula_abp_policy.some_policy.directive[i]`, which breaks as soon as the
-# directive order changes. Use the data source when the policy is not managed here, or is managed
-# in a different module; use the `locals` map to avoid the extra read when it is.
+# Always address directives this way, never by index (see the WARNING on `policy2` below).
 data "incapsula_abp_directive" "policy1_block" {
   policy_id = incapsula_abp_policy.policy1.id
   action    = "block"
@@ -128,9 +125,8 @@ resource "incapsula_abp_condition_list_entry" "policy1_block_okhttp" {
 }
 
 #
-# Create a policy and populate it with conditions
-# referencing directive directly via `incapsula_abp_policy.<name>.directive`,
-# indexed by action through a `locals` map
+# Create a policy with a proof_of_work directive and populate its directives
+# with conditions
 #
 
 resource "incapsula_abp_proof_of_work_configuration" "pow1" {
@@ -172,27 +168,32 @@ data "incapsula_abp_policy" "policy2" {
   name       = incapsula_abp_policy.policy2.name
 }
 
-# Create a map of directives by their actions to simplify referencing them
-# later during adding conditions. Actions are unique within a policy, so they make safe map keys.
+# Address each directive by its action.
 #
-# WARNING: never index directives directly (`incapsula_abp_policy.foo.directive[0]`), as
-# any directive order change will add conditions to wrong directives.
+# WARNING: never index directives (`incapsula_abp_policy.foo.directive[0]`). The index
+# moves when directives are added, removed or reordered, so conditions end up on the
+# wrong directive. The nested `condition_list_id` is unreliable for the same reason:
+# on the apply that changes the directive list it is still reported at its old
+# position. This data source re-reads it from the API and is not affected.
+data "incapsula_abp_directive" "policy2_allow" {
+  policy_id = incapsula_abp_policy.policy2.id
+  action    = "allow"
+}
 
-# Caveat: on the single apply that adds, removes or reorders directives, the
-# condition list ids Terraform holds are still attached to the old positions, so
-# that run can fail or briefly target the wrong directive and needs a second apply
-# to converge. The `incapsula_abp_directive` data source used for `policy1` above
-# re-reads the ids from the API and is not affected.
-locals {
-  policy2_directives = {
-    for directive in incapsula_abp_policy.policy2.directive : directive.action => directive
-  }
+data "incapsula_abp_directive" "policy2_block" {
+  policy_id = incapsula_abp_policy.policy2.id
+  action    = "block"
+}
+
+data "incapsula_abp_directive" "policy2_pow" {
+  policy_id = incapsula_abp_policy.policy2.id
+  action    = "proof_of_work"
 }
 
 # Add condition to the `allow` directive
 resource "incapsula_abp_condition_list_entry" "policy2_allow_monitoring_tools" {
   account_id               = var.account_id
-  parent_condition_list_id = local.policy2_directives["allow"].condition_list_id
+  parent_condition_list_id = data.incapsula_abp_directive.policy2_allow.condition_list_id
   condition_id             = data.incapsula_abp_condition.managed_monitoring_tools.id
   state                    = "active"
   tags                     = ["terraform_managed"]
@@ -201,7 +202,7 @@ resource "incapsula_abp_condition_list_entry" "policy2_allow_monitoring_tools" {
 # Skip the `proof_of_work` directive for the managed monitoring tools condition
 resource "incapsula_abp_condition_list_entry" "policy2_pow_skip_monitoring_tools" {
   account_id               = var.account_id
-  parent_condition_list_id = local.policy2_directives["proof_of_work"].skip_condition_list_id
+  parent_condition_list_id = data.incapsula_abp_directive.policy2_pow.skip_condition_list_id
   condition_id             = data.incapsula_abp_condition.managed_monitoring_tools.id
   state                    = "active"
   tags                     = ["terraform_managed"]
@@ -210,7 +211,7 @@ resource "incapsula_abp_condition_list_entry" "policy2_pow_skip_monitoring_tools
 # Add a whole condition list to the `block` directive
 resource "incapsula_abp_condition_list_entry" "policy2_block_sample_condition_list" {
   account_id               = var.account_id
-  parent_condition_list_id = local.policy2_directives["block"].condition_list_id
+  parent_condition_list_id = data.incapsula_abp_directive.policy2_block.condition_list_id
   condition_list_id        = incapsula_abp_condition_list.sample_condition_list.id
   state                    = "monitor"
   tags                     = ["terraform_managed"]

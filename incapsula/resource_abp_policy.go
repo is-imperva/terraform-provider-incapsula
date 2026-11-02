@@ -46,9 +46,17 @@ func resourceAbpPolicy() *schema.Resource {
 directives, each pairing an action with the conditions that trigger it, applied
 to traffic that a Site's selector maps to this Policy.
 
-All ` + "`directive`" + ` blocks must be specified explicitly. Each directive exposes a
-` + "`condition_list_id`" + ` to which conditions are attached via
-` + "`incapsula_abp_condition_list_entry`" + `.
+All ` + "`directive`" + ` blocks must be specified explicitly. Conditions are attached to
+a directive with ` + "`incapsula_abp_condition_list_entry`" + `, using the directive's
+condition list as the entry's ` + "`parent_condition_list_id`" + `. Look that condition
+list up with the ` + "`incapsula_abp_directive`" + ` data source, which addresses a
+directive by its ` + "`action`" + ` (see the example below).
+
+Do not read ` + "`directive[i].condition_list_id`" + ` off this resource instead. A list
+index is not a stable handle on a directive, and on the apply that adds, removes
+or reorders directives those nested ids are still reported at their old
+positions, so conditions can be attached to the wrong directive or the apply can
+fail outright. The data source re-reads them from the API and is unaffected.
 
 A directive is identified by its ` + "`action`" + `, which is how the backend-owned
 condition lists are kept attached to the right directive when directives are
@@ -93,6 +101,31 @@ not share an ` + "`action`" + `.`,
 								),
 							),
 						},
+						// Known limitation: these two are backend-owned ids
+						// nested inside a TypeList, and SDKv2 keeps such a
+						// computed value attached to its list index. Whenever
+						// `directive` changes shape they are therefore reported
+						// at their old position for the duration of that plan:
+						// a newly added directive plans its id as null instead
+						// of unknown, so a resource consuming it fails the
+						// apply with "Provider produced inconsistent final
+						// plan", and after a reorder a consumer silently
+						// receives the id of whichever directive previously sat
+						// at that index.
+						//
+						// There is no escape hatch: SetNew / SetNewComputed
+						// (helper/schema/resource_diff.go) go through
+						// checkKey(key, caller, false), which resolves
+						// top-level schema keys only, so `directive.N.*` cannot
+						// be marked unknown from CustomizeDiff. Fixing it means
+						// publishing the ids as top-level action-keyed maps, or
+						// moving the resource to terraform-plugin-framework.
+						//
+						// Until then the supported way to attach conditions to
+						// a directive is the `incapsula_abp_directive` data
+						// source, which re-reads the ids from the API and so is
+						// immune to both problems. Prefer it over these
+						// attributes in docs and examples.
 						"condition_list_id": {
 							Description: "Condition list containing conditions for this directive.",
 							Type:        schema.TypeString,
