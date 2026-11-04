@@ -103,7 +103,7 @@ func resourceAbpCredentialCreate(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 	rsaKey := data.Get("rsa_key").(string)
-	encrypted, err := encryptRsa([]byte(rsaKey), []byte(created.Secret), "abp_credential")
+	encrypted, err := encryptRsa([]byte(rsaKey), []byte(created.Secret), abpCredentialEncryptionLabel)
 	if err != nil {
 		return diag.FromErr(err)
 	}
