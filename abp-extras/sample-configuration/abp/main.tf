@@ -320,10 +320,11 @@ data "incapsula_abp_site_analysis_settings" "static" {
 }
 
 data "incapsula_abp_site_analysis_settings" "postback" {
-  rate_limiting                     = "custom_scope"
-  rate_limiting_custom_scope        = "my scope"
-  max_requests_per_minute           = 55
-  max_requests_per_session          = 555
+  rate_limiting              = "custom_scope"
+  rate_limiting_custom_scope = "my scope"
+  max_requests_per_minute    = 55
+  max_requests_per_session   = 555
+  # durations use the largest fitting units: "1h", not "60m"
   max_session_length                = "1h"
   use_site_rate_limiting_parameters = false
 }
@@ -409,6 +410,10 @@ locals {
 #     the next apply.
 resource "incapsula_abp_account_site_priority" "accprio" {
   account_id = var.account_id
+  # The list has to contain every site of the account, so the sites whose order
+  # matters come first and everything else - sites created in the UI, by another
+  # workspace or by another module - is appended from the data source. A literal
+  # list breaks as soon as anyone adds a site.
   site_ids = concat(
     local.managed_sites,
     [for site in data.incapsula_abp_sites.all.sites : site.id if !contains(local.managed_sites, site.id)]
@@ -518,7 +523,7 @@ resource "incapsula_abp_domain" "example_com" {
   cookie_mode = "lax"
 
   // Todo: reference a rule here
-  // Commented out due to no MY available locally
+  // Commented out because it requires an existing Incapsula rule
   # no_js_injection_path {
   #   incap_rule = "URL == \"/admin\""
   # }
