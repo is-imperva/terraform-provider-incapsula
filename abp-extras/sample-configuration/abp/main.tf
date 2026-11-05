@@ -411,7 +411,7 @@ resource "incapsula_abp_domain" "example_com" {
   cookie_mode = "lax"
 
   // Todo: reference a rule here
-  // Commented out due to no MY available locally
+  // Commented out because it requires an existing Incapsula rule
   # no_js_injection_path {
   #   incap_rule = "URL == \"/admin\""
   # }
