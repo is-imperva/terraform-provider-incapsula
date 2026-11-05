@@ -169,31 +169,45 @@ func flattenAbpSelectors(selectors []AbpSelector, nestedKind bool) ([]any, error
 			m["purpose"] = *s.Purpose
 		}
 
-		criteria := map[string]any{"case_insensitive": s.Criteria.CaseInsensitive}
-		if s.Criteria.PathPrefix != nil {
-			criteria["path_prefix"] = *s.Criteria.PathPrefix
-		}
-		if s.Criteria.PathRegex != nil {
-			criteria["path_regex"] = *s.Criteria.PathRegex
-		}
-		if s.Criteria.Postback != nil {
-			criteria["postback"] = *s.Criteria.Postback
-		}
-		if s.Criteria.ApiSecurityGroup != nil {
-			criteria["api_security_group"] = *s.Criteria.ApiSecurityGroup
-		}
 		if nestedKind {
-			m["kind"] = []any{criteria}
+			kind, err := flattenAbpSelectorCriteria(s.Criteria)
+			if err != nil {
+				return nil, fmt.Errorf("selector[%d]: %w", i, err)
+			}
+			m["kind"] = []any{kind}
 		} else {
 			// The flat shape is only used for the default selector, whose
 			// criteria is always a `/` path prefix.
-			for k, v := range criteria {
-				m[k] = v
+			m["case_insensitive"] = s.Criteria.CaseInsensitive
+			if s.Criteria.PathPrefix != nil {
+				m["path_prefix"] = *s.Criteria.PathPrefix
 			}
 		}
 		out[i] = m
 	}
 	return out, nil
+}
+
+// flattenAbpSelectorCriteria turns a criteria into the single `kind` block
+// holding it. An unrecognised criteria is an error rather than an empty
+// `kind`, so that a criteria this provider version does not know about is
+// never silently rewritten into a different one.
+func flattenAbpSelectorCriteria(c AbpSelectorCriteria) (map[string]any, error) {
+	switch {
+	case c.PathPrefix != nil:
+		return map[string]any{"path_prefix": []any{map[string]any{
+			"value":            *c.PathPrefix,
+			"case_insensitive": c.CaseInsensitive,
+		}}}, nil
+	case c.PathRegex != nil:
+		return map[string]any{"path_regex": []any{map[string]any{"value": *c.PathRegex}}}, nil
+	case c.Postback != nil:
+		return map[string]any{"postback": []any{map[string]any{"value": *c.Postback}}}, nil
+	case c.ApiSecurityGroup != nil:
+		return map[string]any{"api_security_group": []any{map[string]any{"value": *c.ApiSecurityGroup}}}, nil
+	default:
+		return nil, fmt.Errorf("selector uses a match criteria this provider version does not support; upgrade the provider to manage this Site")
+	}
 }
 
 func flattenAbpSite(site *AbpSite) (map[string]any, error) {

@@ -338,11 +338,15 @@ resource "incapsula_abp_site" "sample_site" {
   default_max_requests_per_session = 600
   default_max_session_length       = "2h"
 
+  # Each selector matches requests one way, chosen by which block `kind`
+  # holds. Write exactly one of them.
   selector {
     purpose = "login"
     kind {
-      path_prefix      = "/login"
-      case_insensitive = true
+      path_prefix {
+        value            = "/login"
+        case_insensitive = true
+      }
     }
     policy_id         = incapsula_abp_policy.policy2.id
     analysis_settings = data.incapsula_abp_site_analysis_settings.login.json
@@ -350,14 +354,18 @@ resource "incapsula_abp_site" "sample_site" {
 
   selector {
     kind {
-      path_regex = "\\.png$"
+      path_regex {
+        value = "\\.png$"
+      }
     }
     analysis_settings = data.incapsula_abp_site_analysis_settings.static.json
   }
 
   selector {
     kind {
-      postback = "web_interrogation"
+      postback {
+        value = "web_interrogation"
+      }
     }
     analysis_settings = data.incapsula_abp_site_analysis_settings.postback.json
   }
@@ -366,7 +374,9 @@ resource "incapsula_abp_site" "sample_site" {
   selector {
     purpose = "backend_api"
     kind {
-      api_security_group = "sample-checkout-api"
+      api_security_group {
+        value = "sample-checkout-api"
+      }
     }
     analysis_settings = data.incapsula_abp_site_analysis_settings.postback.json
   }
@@ -620,7 +630,9 @@ resource "incapsula_abp_site" "site2" {
   selector {
     purpose = "login"
     kind {
-      path_prefix = "/login"
+      path_prefix {
+        value = "/login"
+      }
     }
     policy_id         = incapsula_abp_policy.policy2.id
     analysis_settings = data.incapsula_abp_site_analysis_settings.login.json
@@ -629,7 +641,9 @@ resource "incapsula_abp_site" "site2" {
   selector {
     purpose = "checkout"
     kind {
-      path_regex = "^/checkout/.*$"
+      path_regex {
+        value = "^/checkout/.*$"
+      }
     }
     analysis_settings = data.incapsula_abp_site_analysis_settings.postback.json
   }
@@ -669,18 +683,18 @@ output "my_credential_encrypted_secret" {
 
 # ABP reports its per-selector request counters against `derived_id`, which is
 # recomputed from the selector's fields whenever any of them change, so a
-# dashboard needs to be told the current value.
+# dashboard needs to be told the current value. Which `kind` block a selector
+# holds says how it matches, so the matched value is read from the one block
+# that is present.
 output "sample_site_selector_derived_ids" {
   value = {
     for selector in incapsula_abp_site.sample_site.selector :
-    selector.derived_id => one([
-      for criteria in [
-        selector.kind[0].path_prefix,
-        selector.kind[0].path_regex,
-        selector.kind[0].postback,
-        selector.kind[0].api_security_group,
-      ] : criteria if criteria != ""
-    ])
+    selector.derived_id => one(concat(
+      [for criteria in selector.kind[0].path_prefix : criteria.value],
+      [for criteria in selector.kind[0].path_regex : criteria.value],
+      [for criteria in selector.kind[0].postback : criteria.value],
+      [for criteria in selector.kind[0].api_security_group : criteria.value],
+    ))
   }
 }
 

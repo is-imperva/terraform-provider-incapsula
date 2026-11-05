@@ -5,9 +5,11 @@ page_title: "incapsula_abp_site"
 description: |-
   Provides an ABP Site (a.k.a. Website Group) resource. A Site groups one or
   more Domains together and maps incoming requests to Policies via an ordered
-  list of Selectors.
-  NOTE: The API automatically appends a default catch-all selector
-  (path_prefix = "/") at the lowest priority on create. You manage only
+  list of Selectors. Each Selector matches requests one way — by path prefix, by
+  path regular expression, by Postback type or by API Security group — chosen by
+  which block its kind holds.
+  NOTE: The API automatically appends a default catch-all selector (the path
+  prefix /) at the lowest priority on create. You manage only
   the user-defined selectors in the selector list; the default is exposed
   read-only as default_selector and is preserved across updates.
 ---
@@ -17,10 +19,12 @@ description: |-
 
 Provides an ABP Site (a.k.a. Website Group) resource. A Site groups one or
 more Domains together and maps incoming requests to Policies via an ordered
-list of Selectors.
+list of Selectors. Each Selector matches requests one way — by path prefix, by
+path regular expression, by Postback type or by API Security group — chosen by
+which block its `kind` holds.
 
-NOTE: The API automatically appends a default catch-all selector
-(`path_prefix = "/"`) at the lowest priority on create. You manage only
+NOTE: The API automatically appends a default catch-all selector (the path
+prefix `/`) at the lowest priority on create. You manage only
 the user-defined selectors in the `selector` list; the default is exposed
 read-only as `default_selector` and is preserved across updates.
 
@@ -38,13 +42,18 @@ resource "incapsula_abp_site" "sample_site" {
   default_max_requests_per_session = 600
   default_max_session_length       = "2h"
 
+  # Each selector matches requests one way, chosen by which block `kind`
+  # holds. Write exactly one of them.
+
   # Match by path prefix and apply a specific Policy.
   selector {
     purpose   = "login"
     policy_id = incapsula_abp_policy.policy_with_custom_directives.id
     kind {
-      path_prefix      = "/login"
-      case_insensitive = true
+      path_prefix {
+        value            = "/login"
+        case_insensitive = true
+      }
     }
     analysis_settings = data.incapsula_abp_site_analysis_settings.login.json
   }
@@ -52,7 +61,9 @@ resource "incapsula_abp_site" "sample_site" {
   # Match by regex.
   selector {
     kind {
-      path_regex = "\\.png$"
+      path_regex {
+        value = "\\.png$"
+      }
     }
     analysis_settings = data.incapsula_abp_site_analysis_settings.static.json
   }
@@ -60,7 +71,9 @@ resource "incapsula_abp_site" "sample_site" {
   # A postback selector.
   selector {
     kind {
-      postback = "web_interrogation"
+      postback {
+        value = "web_interrogation"
+      }
     }
     analysis_settings = data.incapsula_abp_site_analysis_settings.postback.json
   }
@@ -69,7 +82,9 @@ resource "incapsula_abp_site" "sample_site" {
   selector {
     purpose = "backend_api"
     kind {
-      api_security_group = "checkout-api"
+      api_security_group {
+        value = "checkout-api"
+      }
     }
     analysis_settings = data.incapsula_abp_site_analysis_settings.postback.json
   }
@@ -105,7 +120,7 @@ resource "incapsula_abp_site" "sample_site" {
 Required:
 
 - `analysis_settings` (String) JSON-encoded analysis settings for this selector, typically produced by an `incapsula_abp_site_analysis_settings` data source. Use that data source rather than hand-written JSON: the value is compared as a string, so key order and whitespace must match its output exactly.
-- `kind` (Block List, Min: 1, Max: 1) Match criteria for this Selector. Exactly one of `path_prefix`, `path_regex`, `postback`, `api_security_group` must be set. (see [below for nested schema](#nestedblock--selector--kind))
+- `kind` (Block List, Min: 1, Max: 1) Match criteria for this Selector. Write exactly one of the `path_prefix`, `path_regex`, `postback` and `api_security_group` blocks; writing none or more than one is an error. (see [below for nested schema](#nestedblock--selector--kind))
 
 Optional:
 
@@ -124,11 +139,46 @@ Read-Only:
 
 Optional:
 
-- `api_security_group` (String) Match requests belonging to this API Security group. Mutually exclusive with `path_prefix`, `path_regex` and `postback`.
-- `case_insensitive` (Boolean) Match `path_prefix` without regard to case. Applies to `path_prefix` only.
-- `path_prefix` (String) Match requests whose path begins with this prefix. Mutually exclusive with `path_regex`, `postback` and `api_security_group`.
-- `path_regex` (String) Match requests whose path matches this regular expression. Mutually exclusive with `path_prefix`, `postback` and `api_security_group`.
-- `postback` (String) Match a specific Postback request type. One of: web_interrogation, ios_interrogation, web_automation, android_interrogation. Mutually exclusive with `path_prefix`, `path_regex` and `api_security_group`.
+- `api_security_group` (Block List, Max: 1) Match requests belonging to an API Security group. (see [below for nested schema](#nestedblock--selector--kind--api_security_group))
+- `path_prefix` (Block List, Max: 1) Match requests whose path begins with a prefix. (see [below for nested schema](#nestedblock--selector--kind--path_prefix))
+- `path_regex` (Block List, Max: 1) Match requests whose path matches a regular expression. (see [below for nested schema](#nestedblock--selector--kind--path_regex))
+- `postback` (Block List, Max: 1) Match a specific Postback request type. (see [below for nested schema](#nestedblock--selector--kind--postback))
+
+<a id="nestedblock--selector--kind--api_security_group"></a>
+### Nested Schema for `selector.kind.api_security_group`
+
+Required:
+
+- `value` (String) Name of the API Security group to match.
+
+
+<a id="nestedblock--selector--kind--path_prefix"></a>
+### Nested Schema for `selector.kind.path_prefix`
+
+Required:
+
+- `value` (String) The path prefix to match.
+
+Optional:
+
+- `case_insensitive` (Boolean) Match the prefix without regard to case.
+
+
+<a id="nestedblock--selector--kind--path_regex"></a>
+### Nested Schema for `selector.kind.path_regex`
+
+Required:
+
+- `value` (String) The regular expression to match the path against.
+
+
+<a id="nestedblock--selector--kind--postback"></a>
+### Nested Schema for `selector.kind.postback`
+
+Required:
+
+- `value` (String) The Postback request type to match. One of: web_interrogation, ios_interrogation, web_automation, android_interrogation.
+
 
 
 

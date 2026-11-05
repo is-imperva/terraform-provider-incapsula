@@ -82,8 +82,39 @@ Read-Only:
 
 Read-Only:
 
-- `api_security_group` (String)
+- `api_security_group` (List of Object) (see [below for nested schema](#nestedobjatt--selector--kind--api_security_group))
+- `path_prefix` (List of Object) (see [below for nested schema](#nestedobjatt--selector--kind--path_prefix))
+- `path_regex` (List of Object) (see [below for nested schema](#nestedobjatt--selector--kind--path_regex))
+- `postback` (List of Object) (see [below for nested schema](#nestedobjatt--selector--kind--postback))
+
+<a id="nestedobjatt--selector--kind--api_security_group"></a>
+### Nested Schema for `selector.kind.api_security_group`
+
+Read-Only:
+
+- `value` (String)
+
+
+<a id="nestedobjatt--selector--kind--path_prefix"></a>
+### Nested Schema for `selector.kind.path_prefix`
+
+Read-Only:
+
 - `case_insensitive` (Boolean)
-- `path_prefix` (String)
-- `path_regex` (String)
-- `postback` (String)
+- `value` (String)
+
+
+<a id="nestedobjatt--selector--kind--path_regex"></a>
+### Nested Schema for `selector.kind.path_regex`
+
+Read-Only:
+
+- `value` (String)
+
+
+<a id="nestedobjatt--selector--kind--postback"></a>
+### Nested Schema for `selector.kind.postback`
+
+Read-Only:
+
+- `value` (String)
