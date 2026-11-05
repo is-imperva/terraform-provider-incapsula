@@ -147,7 +147,7 @@ func splitDefaultSelector(site *AbpSite) {
 	}
 }
 
-func flattenAbpSelectors(selectors []AbpSelector, nestedKind bool) ([]any, error) {
+func flattenAbpSelectors(selectors []AbpSelector) ([]any, error) {
 	out := make([]any, len(selectors))
 	for i, s := range selectors {
 		encoded, err := json.Marshal(s.AnalysisSettings)
@@ -169,29 +169,22 @@ func flattenAbpSelectors(selectors []AbpSelector, nestedKind bool) ([]any, error
 			m["purpose"] = *s.Purpose
 		}
 
-		if nestedKind {
-			kind, err := flattenAbpSelectorCriteria(s.Criteria)
-			if err != nil {
-				return nil, fmt.Errorf("selector[%d]: %w", i, err)
-			}
-			m["kind"] = []any{kind}
-		} else {
-			// The flat shape is only used for the default selector, whose
-			// criteria is always a `/` path prefix.
-			m["case_insensitive"] = s.Criteria.CaseInsensitive
-			if s.Criteria.PathPrefix != nil {
-				m["path_prefix"] = *s.Criteria.PathPrefix
-			}
+		criteria, err := flattenAbpSelectorCriteria(s.Criteria)
+		if err != nil {
+			return nil, fmt.Errorf("selector[%d]: %w", i, err)
+		}
+		for name, block := range criteria {
+			m[name] = block
 		}
 		out[i] = m
 	}
 	return out, nil
 }
 
-// flattenAbpSelectorCriteria turns a criteria into the single `kind` block
-// holding it. An unrecognised criteria is an error rather than an empty
-// `kind`, so that a criteria this provider version does not know about is
-// never silently rewritten into a different one.
+// flattenAbpSelectorCriteria turns a criteria into the single block holding
+// it. An unrecognised criteria is an error rather than no block at all, so
+// that a criteria this provider version does not know about is never silently
+// rewritten into a different one.
 func flattenAbpSelectorCriteria(c AbpSelectorCriteria) (map[string]any, error) {
 	switch {
 	case c.PathPrefix != nil:
@@ -211,14 +204,14 @@ func flattenAbpSelectorCriteria(c AbpSelectorCriteria) (map[string]any, error) {
 }
 
 func flattenAbpSite(site *AbpSite) (map[string]any, error) {
-	selectors, err := flattenAbpSelectors(site.Selectors, true)
+	selectors, err := flattenAbpSelectors(site.Selectors)
 	if err != nil {
 		return nil, err
 	}
 
 	var defaultSelector []any
 	if site.DefaultSelector != nil {
-		defaultSelector, err = flattenAbpSelectors([]AbpSelector{*site.DefaultSelector}, false)
+		defaultSelector, err = flattenAbpSelectors([]AbpSelector{*site.DefaultSelector})
 		if err != nil {
 			return nil, err
 		}

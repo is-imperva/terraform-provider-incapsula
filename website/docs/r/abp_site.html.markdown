@@ -6,8 +6,9 @@ description: |-
   Provides an ABP Site (a.k.a. Website Group) resource. A Site groups one or
   more Domains together and maps incoming requests to Policies via an ordered
   list of Selectors. Each Selector matches requests one way — by path prefix, by
-  path regular expression, by Postback type or by API Security group — chosen by
-  which block its kind holds.
+  path regular expression, by Postback type or by API Security group — written as
+  exactly one of the path_prefix, path_regex,
+  postback and api_security_group blocks.
   NOTE: The API automatically appends a default catch-all selector (the path
   prefix /) at the lowest priority on create. You manage only
   the user-defined selectors in the selector list; the default is exposed
@@ -20,8 +21,9 @@ description: |-
 Provides an ABP Site (a.k.a. Website Group) resource. A Site groups one or
 more Domains together and maps incoming requests to Policies via an ordered
 list of Selectors. Each Selector matches requests one way — by path prefix, by
-path regular expression, by Postback type or by API Security group — chosen by
-which block its `kind` holds.
+path regular expression, by Postback type or by API Security group — written as
+exactly one of the `path_prefix`, `path_regex`,
+`postback` and `api_security_group` blocks.
 
 NOTE: The API automatically appends a default catch-all selector (the path
 prefix `/`) at the lowest priority on create. You manage only
@@ -42,38 +44,32 @@ resource "incapsula_abp_site" "sample_site" {
   default_max_requests_per_session = 600
   default_max_session_length       = "2h"
 
-  # Each selector matches requests one way, chosen by which block `kind`
-  # holds. Write exactly one of them.
+  # Each selector matches requests one way, written as exactly one of the
+  # path_prefix, path_regex, postback and api_security_group blocks.
 
   # Match by path prefix and apply a specific Policy.
   selector {
     purpose   = "login"
     policy_id = incapsula_abp_policy.policy_with_custom_directives.id
-    kind {
-      path_prefix {
-        value            = "/login"
-        case_insensitive = true
-      }
+    path_prefix {
+      value            = "/login"
+      case_insensitive = true
     }
     analysis_settings = data.incapsula_abp_site_analysis_settings.login.json
   }
 
   # Match by regex.
   selector {
-    kind {
-      path_regex {
-        value = "\\.png$"
-      }
+    path_regex {
+      value = "\\.png$"
     }
     analysis_settings = data.incapsula_abp_site_analysis_settings.static.json
   }
 
   # A postback selector.
   selector {
-    kind {
-      postback {
-        value = "web_interrogation"
-      }
+    postback {
+      value = "web_interrogation"
     }
     analysis_settings = data.incapsula_abp_site_analysis_settings.postback.json
   }
@@ -81,10 +77,8 @@ resource "incapsula_abp_site" "sample_site" {
   # Match requests of an API Security group.
   selector {
     purpose = "backend_api"
-    kind {
-      api_security_group {
-        value = "checkout-api"
-      }
+    api_security_group {
+      value = "checkout-api"
     }
     analysis_settings = data.incapsula_abp_site_analysis_settings.postback.json
   }
@@ -105,7 +99,7 @@ resource "incapsula_abp_site" "sample_site" {
 - `default_max_requests_per_session` (Number) Default maximum number of requests without a token per session. Used by every selector whose analysis settings keep `use_site_rate_limiting_parameters = true` (the default).
 - `default_max_session_length` (String) Default maximum length of a session without a token. Used by every selector whose analysis settings keep `use_site_rate_limiting_parameters = true` (the default). Duration format, e.g. "2d1h". Use the largest fitting units and omit zero components: write "2h", not "120m".
 - `industry` (String) Industry the Site operates in. Informational metadata, unused by the runtime. One of: financial_services, retail, travel, media, telecom, crypto, healthcare, government, ticketing, real_estate, insurance, automotive, nonprofit, utilities, other.
-- `selector` (Block List) Ordered list of Selectors evaluated top-down for this Site. The first matching Selector decides which Policy is applied. (see [below for nested schema](#nestedblock--selector))
+- `selector` (Block List) Ordered list of Selectors evaluated top-down for this Site. The first matching Selector decides which Policy is applied. Each Selector matches requests one way: write exactly one of the `path_prefix`, `path_regex`, `postback` and `api_security_group` blocks. (see [below for nested schema](#nestedblock--selector))
 
 ### Read-Only
 
@@ -120,11 +114,14 @@ resource "incapsula_abp_site" "sample_site" {
 Required:
 
 - `analysis_settings` (String) JSON-encoded analysis settings for this selector, typically produced by an `incapsula_abp_site_analysis_settings` data source. Use that data source rather than hand-written JSON: the value is compared as a string, so key order and whitespace must match its output exactly.
-- `kind` (Block List, Min: 1, Max: 1) Match criteria for this Selector. Write exactly one of the `path_prefix`, `path_regex`, `postback` and `api_security_group` blocks; writing none or more than one is an error. (see [below for nested schema](#nestedblock--selector--kind))
 
 Optional:
 
+- `api_security_group` (Block List, Max: 1) Match requests belonging to an API Security group. Mutually exclusive with `path_prefix`, `path_regex` and `postback`. (see [below for nested schema](#nestedblock--selector--api_security_group))
+- `path_prefix` (Block List, Max: 1) Match requests whose path begins with a prefix. Mutually exclusive with `path_regex`, `postback` and `api_security_group`. (see [below for nested schema](#nestedblock--selector--path_prefix))
+- `path_regex` (Block List, Max: 1) Match requests whose path matches a regular expression. Mutually exclusive with `path_prefix`, `postback` and `api_security_group`. (see [below for nested schema](#nestedblock--selector--path_regex))
 - `policy_id` (String) Policy applied when this Selector matches. Omit to apply no Policy (e.g. for static assets).
+- `postback` (Block List, Max: 1) Match a specific Postback request type. Mutually exclusive with `path_prefix`, `path_regex` and `api_security_group`. (see [below for nested schema](#nestedblock--selector--postback))
 - `purpose` (String) What this Selector matches, e.g. the user flow or endpoint kind. Informational metadata, unused by the runtime. One of: login, signup, password_reset, mfa, search, browse, cart, checkout, payment, form_submission, booking, backend_api, unknown, other. `unknown` means "explicitly not known", which is distinct from omitting the attribute.
 
 Read-Only:
@@ -134,26 +131,16 @@ Read-Only:
 - `id` (String) Server-assigned Selector ID.
 - `modified_at` (String) RFC3339 timestamp at which the Selector was last modified.
 
-<a id="nestedblock--selector--kind"></a>
-### Nested Schema for `selector.kind`
-
-Optional:
-
-- `api_security_group` (Block List, Max: 1) Match requests belonging to an API Security group. (see [below for nested schema](#nestedblock--selector--kind--api_security_group))
-- `path_prefix` (Block List, Max: 1) Match requests whose path begins with a prefix. (see [below for nested schema](#nestedblock--selector--kind--path_prefix))
-- `path_regex` (Block List, Max: 1) Match requests whose path matches a regular expression. (see [below for nested schema](#nestedblock--selector--kind--path_regex))
-- `postback` (Block List, Max: 1) Match a specific Postback request type. (see [below for nested schema](#nestedblock--selector--kind--postback))
-
-<a id="nestedblock--selector--kind--api_security_group"></a>
-### Nested Schema for `selector.kind.api_security_group`
+<a id="nestedblock--selector--api_security_group"></a>
+### Nested Schema for `selector.api_security_group`
 
 Required:
 
 - `value` (String) Name of the API Security group to match.
 
 
-<a id="nestedblock--selector--kind--path_prefix"></a>
-### Nested Schema for `selector.kind.path_prefix`
+<a id="nestedblock--selector--path_prefix"></a>
+### Nested Schema for `selector.path_prefix`
 
 Required:
 
@@ -164,21 +151,20 @@ Optional:
 - `case_insensitive` (Boolean) Match the prefix without regard to case.
 
 
-<a id="nestedblock--selector--kind--path_regex"></a>
-### Nested Schema for `selector.kind.path_regex`
+<a id="nestedblock--selector--path_regex"></a>
+### Nested Schema for `selector.path_regex`
 
 Required:
 
 - `value` (String) The regular expression to match the path against.
 
 
-<a id="nestedblock--selector--kind--postback"></a>
-### Nested Schema for `selector.kind.postback`
+<a id="nestedblock--selector--postback"></a>
+### Nested Schema for `selector.postback`
 
 Required:
 
 - `value` (String) The Postback request type to match. One of: web_interrogation, ios_interrogation, web_automation, android_interrogation.
-
 
 
 
@@ -188,14 +174,21 @@ Required:
 Read-Only:
 
 - `analysis_settings` (String)
-- `case_insensitive` (Boolean)
 - `created_at` (String)
 - `derived_id` (String)
 - `id` (String)
 - `modified_at` (String)
-- `path_prefix` (String)
+- `path_prefix` (List of Object) (see [below for nested schema](#nestedobjatt--default_selector--path_prefix))
 - `policy_id` (String)
 - `purpose` (String)
+
+<a id="nestedobjatt--default_selector--path_prefix"></a>
+### Nested Schema for `default_selector.path_prefix`
+
+Read-Only:
+
+- `case_insensitive` (Boolean)
+- `value` (String)
 
 ## Import
 

@@ -338,34 +338,28 @@ resource "incapsula_abp_site" "sample_site" {
   default_max_requests_per_session = 600
   default_max_session_length       = "2h"
 
-  # Each selector matches requests one way, chosen by which block `kind`
-  # holds. Write exactly one of them.
+  # Each selector matches requests one way, written as exactly one of the
+  # path_prefix, path_regex, postback and api_security_group blocks.
   selector {
     purpose = "login"
-    kind {
-      path_prefix {
-        value            = "/login"
-        case_insensitive = true
-      }
+    path_prefix {
+      value            = "/login"
+      case_insensitive = true
     }
     policy_id         = incapsula_abp_policy.policy2.id
     analysis_settings = data.incapsula_abp_site_analysis_settings.login.json
   }
 
   selector {
-    kind {
-      path_regex {
-        value = "\\.png$"
-      }
+    path_regex {
+      value = "\\.png$"
     }
     analysis_settings = data.incapsula_abp_site_analysis_settings.static.json
   }
 
   selector {
-    kind {
-      postback {
-        value = "web_interrogation"
-      }
+    postback {
+      value = "web_interrogation"
     }
     analysis_settings = data.incapsula_abp_site_analysis_settings.postback.json
   }
@@ -373,10 +367,8 @@ resource "incapsula_abp_site" "sample_site" {
   # The fourth criteria variant: requests belonging to an API Security group.
   selector {
     purpose = "backend_api"
-    kind {
-      api_security_group {
-        value = "sample-checkout-api"
-      }
+    api_security_group {
+      value = "sample-checkout-api"
     }
     analysis_settings = data.incapsula_abp_site_analysis_settings.postback.json
   }
@@ -629,10 +621,8 @@ resource "incapsula_abp_site" "site2" {
   # provider does not model attached to the right selector across an update.
   selector {
     purpose = "login"
-    kind {
-      path_prefix {
-        value = "/login"
-      }
+    path_prefix {
+      value = "/login"
     }
     policy_id         = incapsula_abp_policy.policy2.id
     analysis_settings = data.incapsula_abp_site_analysis_settings.login.json
@@ -640,10 +630,8 @@ resource "incapsula_abp_site" "site2" {
 
   selector {
     purpose = "checkout"
-    kind {
-      path_regex {
-        value = "^/checkout/.*$"
-      }
+    path_regex {
+      value = "^/checkout/.*$"
     }
     analysis_settings = data.incapsula_abp_site_analysis_settings.postback.json
   }
@@ -683,17 +671,17 @@ output "my_credential_encrypted_secret" {
 
 # ABP reports its per-selector request counters against `derived_id`, which is
 # recomputed from the selector's fields whenever any of them change, so a
-# dashboard needs to be told the current value. Which `kind` block a selector
+# dashboard needs to be told the current value. Which criteria block a selector
 # holds says how it matches, so the matched value is read from the one block
 # that is present.
 output "sample_site_selector_derived_ids" {
   value = {
     for selector in incapsula_abp_site.sample_site.selector :
     selector.derived_id => one(concat(
-      [for criteria in selector.kind[0].path_prefix : criteria.value],
-      [for criteria in selector.kind[0].path_regex : criteria.value],
-      [for criteria in selector.kind[0].postback : criteria.value],
-      [for criteria in selector.kind[0].api_security_group : criteria.value],
+      [for criteria in selector.path_prefix : criteria.value],
+      [for criteria in selector.path_regex : criteria.value],
+      [for criteria in selector.postback : criteria.value],
+      [for criteria in selector.api_security_group : criteria.value],
     ))
   }
 }
