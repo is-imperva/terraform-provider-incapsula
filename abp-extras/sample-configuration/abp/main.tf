@@ -250,8 +250,12 @@ resource "incapsula_abp_condition_list_entry" "account_global_allow_okhttp" {
 #
 
 data "incapsula_abp_site_analysis_settings" "login" {
-  rate_limiting           = "per_site"
-  max_requests_per_minute = 100
+  rate_limiting = "per_site"
+  # `use_site_rate_limiting_parameters` defaults to true, which means the site
+  # defaults are used and max_requests_per_minute/_session and
+  # max_session_length are ignored. Set it to false to make them count.
+  max_requests_per_minute           = 100
+  use_site_rate_limiting_parameters = false
 }
 
 data "incapsula_abp_site_analysis_settings" "static" {
@@ -321,6 +325,10 @@ locals {
 
 resource "incapsula_abp_account_site_priority" "accprio" {
   account_id = var.account_id
+  # The list has to contain every site of the account, so the sites whose order
+  # matters come first and everything else - sites created in the UI, by another
+  # workspace or by another module - is appended from the data source. A literal
+  # list breaks as soon as anyone adds a site.
   site_ids = concat(
     local.managed_sites,
     [for site in data.incapsula_abp_sites.all.sites : site.id if !contains(local.managed_sites, site.id)]
@@ -464,6 +472,13 @@ resource "incapsula_abp_site_domain_priority" "sample_site" {
 resource "incapsula_abp_domain_encryption_key" "test_com" {
   domain_id = incapsula_abp_domain.test_com.id
   key       = "U2VjcmV0IGtleSB1c2luZyBzdGF0ZS1vZi10aGUtYXJ0IGJhc2U2NCBlbmNyeXB0aW9u"
+
+  # Keys cannot be changed in place. Without this, rotating the key would delete
+  # the current one before creating its replacement, leaving the domain without
+  # a usable key until the new one is published.
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 #------------------------------------------------------------------------------
@@ -501,28 +516,6 @@ resource "incapsula_abp_site" "site2" {
     analysis_settings = data.incapsula_abp_site_analysis_settings.postback.json
   }
 }
-
-# TODO
-#resource "incapsula_abp_account_site_priority" "accprio" {
-#  account_id = var.account_id
-#  site_ids = [
-#    incapsula_abp_site.sample_site.id,
-#    incapsula_abp_site.site2.id,
-#    data.incapsula_abp_site.ext_site1.id,
-#    data.incapsula_abp_site.ext_site2.id,
-#    data.incapsula_abp_site.ext_site3.id,
-#    data.incapsula_abp_site.ext_site4.id,
-#    data.incapsula_abp_site.ext_site5.id,
-#    data.incapsula_abp_site.ext_site6.id,
-#    data.incapsula_abp_site.ext_site7.id,
-#    data.incapsula_abp_site.ext_site8.id,
-#    data.incapsula_abp_site.ext_site9.id,
-#    data.incapsula_abp_site.ext_site10.id,
-#    data.incapsula_abp_site.ext_site11.id,
-#    data.incapsula_abp_site.ext_site12.id,
-#    data.incapsula_abp_site.ext_site13.id,
-#  ]
-#}
 
 resource "incapsula_abp_credential" "my_credential" {
   account_id = var.account_id
