@@ -87,7 +87,7 @@ func resourceAbpWebsites() *schema.Resource {
 				Required:    true,
 			},
 			"auto_publish": {
-				Description: "Whether to publish the changes automatically. Changes don't take take effect until they have been published.",
+				Description: "Whether to publish the changes automatically. Changes don't take effect until they have been published.",
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
