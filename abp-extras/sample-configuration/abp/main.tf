@@ -340,6 +340,12 @@ resource "incapsula_abp_site" "sample_site" {
 
   # Each selector matches requests one way, written as exactly one of the
   # path_prefix, path_regex, postback and api_security_group blocks.
+  #
+  # A selector may use a `/` path prefix, and so match every path, just as the
+  # catch-all the backend appends does. Such a selector stays this
+  # configuration's own — it is not mistaken for the catch-all — but it leaves
+  # the catch-all unreachable behind it, so `default_selector[0].policy_id`
+  # would then point at a policy nothing applies.
   selector {
     purpose = "login"
     path_prefix {
