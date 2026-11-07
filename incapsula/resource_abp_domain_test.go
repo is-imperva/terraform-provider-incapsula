@@ -1155,10 +1155,10 @@ func TestAbpDomain_InvalidValuesAreRejectedAtPlanTime(t *testing.T) {
 	resource.Test(t, resource.TestCase{ProviderFactories: f.providers(t), Steps: cases})
 }
 
-// Known limitation: the "exactly one of" rules live in the create and update
-// paths rather than in validation, so these configurations plan cleanly and
-// fail during apply. Nothing is created, because the checks run before the
-// request is sent.
+// Known limitation: the `criteria` and `captcha_settings` "exactly one of"
+// rules live in the create and update paths rather than in validation, so
+// these configurations plan cleanly and fail during apply. Nothing is created,
+// because the checks run before the request is sent.
 func TestAbpDomain_OneOfViolationsAreRejectedAtApplyTime(t *testing.T) {
 	f := newAbpFake(t)
 	siteId := f.seedSite("one-of")
@@ -1170,7 +1170,6 @@ func TestAbpDomain_OneOfViolationsAreRejectedAtApplyTime(t *testing.T) {
 		{"criteria {\n  }", `criteria requires exactly one of exact, prefix, suffix, cloudwaf_id \(got 0\)`},
 		{"criteria {\n    exact  = \"one-of.example.com\"\n    suffix = \"example.com\"\n  }", `criteria requires exactly one of exact, prefix, suffix, cloudwaf_id \(got 2\)`},
 		{"criteria {\n    exact = \"one-of.example.com\"\n  }\n\n  captcha_settings {\n    managed_geetest {\n      difficulty = \"easy\"\n    }\n    managed_hcaptcha {\n      difficulty = \"auto\"\n    }\n  }", `captcha_settings requires exactly one of geetest, managed_geetest, managed_hcaptcha \(got 2\)`},
-		{"criteria {\n    exact = \"one-of.example.com\"\n  }\n\n  no_js_injection_path {\n    path_prefix = \"/static\"\n    incap_rule  = \"URL == \\\"/admin\\\"\"\n  }", `no_js_injection_path\[0\]: exactly one of path_prefix, incap_rule must be set \(got 2\)`},
 	}
 
 	var steps []resource.TestStep
@@ -1195,19 +1194,59 @@ func TestAbpDomain_OneOfViolationsAreRejectedAtApplyTime(t *testing.T) {
 	}
 }
 
-// Provider bug: an empty `no_js_injection_path` block reaches the provider as a
-// nil element, and the extraction asserts it is a map, so the provider panics
-// instead of reporting the "exactly one of" error the other variants get. The
-// crash takes the whole provider process with it, so it is pinned here at the
-// function rather than through a configuration.
-func TestAbpDomain_EmptyNoJsInjectionPathPanics(t *testing.T) {
-	defer func() {
-		if recovered := recover(); recovered == nil {
-			t.Fatal("extractAbpNoJsInjectionPaths no longer panics on an empty block; assert the error instead")
+// A `no_js_injection_path` block must say where injection is disabled, exactly
+// one way. An empty block reaches the provider as a nil element rather than as
+// a map, so it used to crash the provider instead of being reported; both an
+// empty block and one setting both ways are now rejected when the
+// configuration is planned, before anything is sent.
+func TestAbpDomain_InvalidNoJsInjectionPathIsRejectedAtPlanTime(t *testing.T) {
+	f := newAbpFake(t)
+	siteId := f.seedSite("no-js")
+
+	blocks := []struct {
+		body  string
+		error string
+	}{
+		{"no_js_injection_path {}", `no_js_injection_path\[0\]: exactly one of path_prefix, incap_rule must be set \(got 0\)`},
+		{"no_js_injection_path {\n    path_prefix = \"/static\"\n    incap_rule  = \"URL == \\\"/admin\\\"\"\n  }", `no_js_injection_path\[0\]: exactly one of path_prefix, incap_rule must be set \(got 2\)`},
+	}
+
+	var steps []resource.TestStep
+	for _, block := range blocks {
+		steps = append(steps, resource.TestStep{
+			Config: abpDomainConfig(siteId, fmt.Sprintf(`
+  cookiescope = "no-js.example.com"
+
+  criteria {
+    exact = "no-js.example.com"
+  }
+
+  %s
+`, block.body)),
+			PlanOnly:    true,
+			ExpectError: regexp.MustCompile(block.error),
+		})
+	}
+
+	resource.Test(t, resource.TestCase{ProviderFactories: f.providers(t), Steps: steps})
+
+	if f.count(abpFakeDomains) != 0 {
+		t.Fatalf("a rejected configuration created %d Domains", f.count(abpFakeDomains))
+	}
+}
+
+// The extraction answers an empty block with the same error rather than with a
+// panic, whichever way it is reached.
+func TestAbpDomain_EmptyNoJsInjectionPathExtractionFails(t *testing.T) {
+	for _, raw := range [][]any{{nil}, {map[string]any{}}} {
+		paths, err := extractAbpNoJsInjectionPaths(raw)
+		if err == nil {
+			t.Fatalf("extracting %v returned %v, want an error", raw, paths)
 		}
-	}()
-	//nolint:errcheck // the call is expected to panic before it returns
-	_, _ = extractAbpNoJsInjectionPaths([]any{nil})
+		if want := "exactly one of path_prefix, incap_rule must be set (got 0)"; !strings.Contains(err.Error(), want) {
+			t.Errorf("extracting %v failed with %q, want it to contain %q", raw, err, want)
+		}
+	}
 }
 
 // A Domain whose Site does not exist is rejected by the API, with the message

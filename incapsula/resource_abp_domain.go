@@ -11,12 +11,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
+// abpNoJsInjectionPathFields are the ways a no-JS-injection rule can say where
+// injection is disabled. Exactly one of them is written per rule.
+var abpNoJsInjectionPathFields = []string{"path_prefix", "incap_rule"}
+
 func resourceAbpDomain() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceAbpDomainCreate,
 		ReadContext:   resourceAbpDomainRead,
 		UpdateContext: resourceAbpDomainUpdate,
 		DeleteContext: resourceAbpDomainDelete,
+		CustomizeDiff: resourceAbpDomainCustomizeDiff,
 
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceAbpDomainImport,
@@ -257,7 +262,7 @@ server disagree. Removing such an attribute from the configuration is planned as
 				},
 			},
 			"no_js_injection_path": {
-				Description: "Rules describing where the ABP JavaScript injection should not occur. Each block must set exactly one of `path_prefix`, `incap_rule`.",
+				Description: "Rules describing where the ABP JavaScript injection should not occur. Each block must set exactly one of `path_prefix`, `incap_rule`; a block setting none or both is rejected when the configuration is planned.",
 				Type:        schema.TypeList,
 				Optional:    true,
 				Elem: &schema.Resource{
@@ -403,7 +408,10 @@ func extractAbpCaptchaSettings(raw []any) (AbpCaptchaSettings, error) {
 func extractAbpNoJsInjectionPaths(raw []any) ([]AbpNoJsInjectionPath, error) {
 	out := make([]AbpNoJsInjectionPath, 0, len(raw))
 	for i, item := range raw {
-		m := item.(map[string]any)
+		// An empty block arrives as a nil element rather than as a map, so the
+		// assertion is checked: an empty block sets nothing and reports the
+		// same error as a block setting both fields.
+		m, _ := item.(map[string]any)
 		prefix, _ := m["path_prefix"].(string)
 		rule, _ := m["incap_rule"].(string)
 		set := 0
@@ -417,11 +425,42 @@ func extractAbpNoJsInjectionPaths(raw []any) ([]AbpNoJsInjectionPath, error) {
 			set++
 		}
 		if set != 1 {
-			return nil, fmt.Errorf("no_js_injection_path[%d]: exactly one of path_prefix, incap_rule must be set (got %d)", i, set)
+			return nil, fmt.Errorf("no_js_injection_path[%d]: %w", i, abpNoJsInjectionPathError(set))
 		}
 		out = append(out, p)
 	}
 	return out, nil
+}
+
+// abpNoJsInjectionPathError reports a no-JS-injection rule that does not say
+// where injection is disabled, naming how many of its two ways it used.
+func abpNoJsInjectionPathError(set int) error {
+	return fmt.Errorf("exactly one of %s must be set (got %d)",
+		strings.Join(abpNoJsInjectionPathFields, ", "), set)
+}
+
+// resourceAbpDomainCustomizeDiff rejects a `no_js_injection_path` block that
+// does not say where injection is disabled, so that the configuration fails at
+// plan time rather than part-way through an apply. The fields are counted
+// through attribute paths because a new block is not yet readable as a whole
+// from the diff.
+func resourceAbpDomainCustomizeDiff(ctx context.Context, diff *schema.ResourceDiff, m any) error {
+	count, ok := diff.Get("no_js_injection_path.#").(int)
+	if !ok {
+		return nil
+	}
+	for i := range count {
+		set := 0
+		for _, field := range abpNoJsInjectionPathFields {
+			if value, ok := diff.Get(fmt.Sprintf("no_js_injection_path.%d.%s", i, field)).(string); ok && value != "" {
+				set++
+			}
+		}
+		if set != 1 {
+			return fmt.Errorf("no_js_injection_path[%d]: %w", i, abpNoJsInjectionPathError(set))
+		}
+	}
+	return nil
 }
 
 func setToStringSlice(s any) []string {
