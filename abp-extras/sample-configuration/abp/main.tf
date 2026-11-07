@@ -485,11 +485,10 @@ resource "incapsula_abp_domain" "test_com" {
   # Keeps common static asset paths out of ABP analysis.
   #
   # NOTE: this value is not applied when the domain is created, only by a later
-  # update, and a domain with no stored value behaves as if filtering were
-  # enabled. Note also that `false` is indistinguishable from an omitted value,
-  # so it is never sent and filtering cannot be turned off from here — which is
-  # why this sample sets `true`, the only value that actually reaches the
-  # server.
+  # update, so the first plan after creating a domain asks for that update. A
+  # domain with no stored value behaves as if filtering were enabled, which is
+  # why `false` looks like it has no effect; removing the attribute clears the
+  # stored value and brings the domain back to that state.
   filter_out_static_assets = true
 
   no_js_injection_path {

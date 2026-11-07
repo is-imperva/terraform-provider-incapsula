@@ -18,13 +18,18 @@ description: |-
   obfuscate_path is server-generated when omitted on create and is
   preserved on update.
   NOTE: the API omits optional fields that have no value instead of returning them
-  as empty, so turning enable_mobile_sdk_token,
-  filter_out_static_assets, divert_host or
+  as empty, so turning divert_host or
   interstitial_inprogress_iframe_src off outside Terraform is not
   detected: terraform plan reports no changes even though state and
-  server disagree. Removing such an attribute from the configuration is planned as
-  -> null but stored as false/empty, which for
-  filter_out_static_assets is the opposite of having no value at all.
+  server disagree, and removing one of them from the configuration is planned as
+  -> null but stored as empty.
+  enable_mobile_sdk_token and filter_out_static_assets have
+  three states on the API — no value, true and false — and
+  no value is not the same as false: a Domain with no
+  filter_out_static_assets filters static assets. Terraform has only
+  the two states, so writing false stores false, removing
+  the attribute clears the stored value, and a Domain with no value stored reads
+  back as false.
 ---
 
 
@@ -48,13 +53,19 @@ is an in-place update.
 preserved on update.
 
 NOTE: the API omits optional fields that have no value instead of returning them
-as empty, so turning `enable_mobile_sdk_token`,
-`filter_out_static_assets`, `divert_host` or
+as empty, so turning `divert_host` or
 `interstitial_inprogress_iframe_src` off outside Terraform is not
 detected: `terraform plan` reports no changes even though state and
-server disagree. Removing such an attribute from the configuration is planned as
-`-> null` but stored as `false`/empty, which for
-`filter_out_static_assets` is the opposite of having no value at all.
+server disagree, and removing one of them from the configuration is planned as
+`-> null` but stored as empty.
+
+`enable_mobile_sdk_token` and `filter_out_static_assets` have
+three states on the API — no value, `true` and `false` — and
+no value is not the same as `false`: a Domain with no
+`filter_out_static_assets` filters static assets. Terraform has only
+the two states, so writing `false` stores `false`, removing
+the attribute clears the stored value, and a Domain with no value stored reads
+back as `false`.
 
 ## Example Usage
 
@@ -122,9 +133,9 @@ resource "incapsula_abp_domain" "test_com" {
 - `cookie_mode` (String) SameSite policy of the ABP cookies. One of: lax, legacy, none_secure, lax_and_none_secure, lax_and_legacy, legacy_and_none_secure. Defaults to `lax`.
 - `divert_host` (String) Domain or IP to which traffic is diverted when the `divert` Directive triggers. Requires traffic diversion to be enabled on the account; otherwise the API accepts the value, reports it as applied and then discards it.
 - `enable_mitigation` (Boolean) If false, all active Conditions are treated as monitor-only. If true (default), Conditions behave per their state.
-- `enable_mobile_sdk_token` (Boolean) Enable to allow mobile SDK tokens. Only enable if you use the ABP mobile SDK with this domain. Defaults to `false`.
+- `enable_mobile_sdk_token` (Boolean) Enable to allow mobile SDK tokens. Only enable if you use the ABP mobile SDK with this domain. Omit it, or remove it, to leave the Domain with no value stored, which behaves as `false`.
 - `encryption_key_id` (String) Existing encryption key to copy when creating this Domain. If unset, a copy of the account default key is used. Honoured on create only: the API consumes it once to clone the key material and never returns it, so later changes to it are ignored.
-- `filter_out_static_assets` (Boolean) CWAF only. Prevents common static asset paths from being analyzed by ABP. **Not applied on create** — the API ignores the value of a new Domain, and a Domain that has no value stored behaves as if filtering were enabled. Setting `false` on create therefore leaves filtering on, with no diff to show it; set it on a later update (or on an existing Domain) for it to take effect.
+- `filter_out_static_assets` (Boolean) CWAF only. Prevents common static asset paths from being analyzed by ABP. **Not applied on create** — the API ignores the value of a new Domain, and a Domain that has no value stored behaves as if filtering were enabled. `true` therefore takes effect only on a later update, which the first plan after the create asks for; `false` leaves filtering on, with nothing in the plan to show it.
 - `interstitial_inprogress_iframe_src` (String) URL of the iframe used to display the PoW challenge in progress. Must be an absolute URL with a scheme and an explicit path; write a bare origin with a trailing slash (`http://www.example.com/`).
 - `log_region` (String) Region in which ABP logs are stored. One of: apac, australia, eu, usa, india. Defaults to `usa`.
 - `no_js_injection_path` (Block List) Rules describing where the ABP JavaScript injection should not occur. Each block must set exactly one of `path_prefix`, `incap_rule`; a block setting none or both is rejected when the configuration is planned. (see [below for nested schema](#nestedblock--no_js_injection_path))

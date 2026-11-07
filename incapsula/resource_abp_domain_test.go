@@ -694,17 +694,17 @@ resource "incapsula_abp_domain_encryption_key" "test" {
 }
 
 // Known limitation: the API omits an optional field that has no value instead
-// of returning it as empty, and the provider only writes such a field into
-// state when the response carries it. Turning one off outside Terraform is
+// of returning it as empty, and the provider only writes such a string field
+// into state when the response carries it. Clearing one outside Terraform is
 // therefore invisible — the plan is empty while state and server disagree.
-// This pins the behaviour that exists today, not the one that is wanted.
+// This pins the behaviour that exists today, not the one that is wanted. The
+// two tri-state booleans are not affected: they are mirrored from the
+// response, so clearing them is reported and corrected.
 func TestAbpDomain_ClearedOptionalFieldsAreInvisible(t *testing.T) {
 	f := newAbpFake(t)
 	siteId := f.seedSite("invisible")
 	config := abpDomainConfig(siteId, `
   cookiescope                        = "invisible.example.com"
-  enable_mobile_sdk_token            = true
-  filter_out_static_assets           = true
   divert_host                        = "divert.example.com"
   interstitial_inprogress_iframe_src = "http://www.example.com/iframe"
 
@@ -721,8 +721,6 @@ func TestAbpDomain_ClearedOptionalFieldsAreInvisible(t *testing.T) {
 				Check: func(s *terraform.State) error {
 					f.mutate(t, abpFakeDomains, abpAttrs(t, s, abpDomainTestAddress)["id"], func(doc map[string]any) {
 						for _, key := range []string{
-							"enable_mobile_sdk_token",
-							"filter_out_static_assets",
 							"divert_host",
 							"interstitial_inprogress_iframe_src",
 						} {
@@ -737,7 +735,6 @@ func TestAbpDomain_ClearedOptionalFieldsAreInvisible(t *testing.T) {
 			{
 				Config: config,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(abpDomainTestAddress, "enable_mobile_sdk_token", "true"),
 					resource.TestCheckResourceAttr(abpDomainTestAddress, "divert_host", "divert.example.com"),
 					func(s *terraform.State) error {
 						if _, ok := abpDomainStored(t, f)["divert_host"]; ok {
@@ -751,61 +748,124 @@ func TestAbpDomain_ClearedOptionalFieldsAreInvisible(t *testing.T) {
 	})
 }
 
-// Known limitation: `enable_mobile_sdk_token` and `filter_out_static_assets`
-// are tri-state on the API (no value / true / false), and no value is
-// meaningful — for `filter_out_static_assets` it means enabled. Terraform
-// cannot express "no value": `false` is sent as `false`, and removing the
-// attribute is planned as `-> null` but sent as `false` too.
-func TestAbpDomain_OptionalBooleansAreSentAsFalse(t *testing.T) {
+// `enable_mobile_sdk_token` and `filter_out_static_assets` are tri-state on
+// the API — no value, `true` and `false` — and no value is meaningful: for
+// `filter_out_static_assets` it means enabled. Terraform has only the two
+// states, so the configuration decides between them: `false` is sent as
+// `false`, and removing the attribute leaves the value out of the request,
+// which clears what the API holds.
+func TestAbpDomain_OptionalBooleansAreTriState(t *testing.T) {
 	f := newAbpFake(t)
 	siteId := f.seedSite("booleans")
-	withFalse := abpDomainConfig(siteId, `
+	booleans := []string{"enable_mobile_sdk_token", "filter_out_static_assets"}
+	withValue := func(value string) string {
+		return abpDomainConfig(siteId, fmt.Sprintf(`
   cookiescope              = "booleans.example.com"
-  enable_mobile_sdk_token  = false
-  filter_out_static_assets = false
+  enable_mobile_sdk_token  = %[1]s
+  filter_out_static_assets = %[1]s
 
   criteria {
     exact = "booleans.example.com"
   }
-`)
+`, value))
+	}
 	withoutThem := abpDomainMinimalConfig(siteId, "booleans.example.com")
 
-	storedBooleans := func(s *terraform.State) error {
-		stored := abpDomainStored(t, f)
-		for _, key := range []string{"enable_mobile_sdk_token", "filter_out_static_assets"} {
-			value, ok := stored[key]
-			if !ok {
-				return fmt.Errorf("%s is absent from the stored Domain, want false", key)
+	// storedBooleans checks what the API was left holding: `nil` for the
+	// absence the attribute's removal asks for.
+	storedBooleans := func(want any) resource.TestCheckFunc {
+		return func(s *terraform.State) error {
+			stored := abpDomainStored(t, f)
+			for _, key := range booleans {
+				value, ok := stored[key]
+				if want == nil {
+					if ok {
+						return fmt.Errorf("stored %s is %v, want it absent", key, value)
+					}
+					continue
+				}
+				if !ok {
+					return fmt.Errorf("%s is absent from the stored Domain, want %v", key, want)
+				}
+				if value != want {
+					return fmt.Errorf("stored %s is %v, want %v", key, value, want)
+				}
 			}
-			if value != false {
-				return fmt.Errorf("stored %s is %v, want false", key, value)
-			}
+			return nil
 		}
-		return nil
+	}
+
+	stateBooleans := func(want string) resource.TestCheckFunc {
+		checks := make([]resource.TestCheckFunc, 0, len(booleans))
+		for _, key := range booleans {
+			checks = append(checks, resource.TestCheckResourceAttr(abpDomainTestAddress, key, want))
+		}
+		return resource.ComposeAggregateTestCheckFunc(checks...)
 	}
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: f.providers(t),
 		Steps: []resource.TestStep{
 			{
-				Config: withFalse,
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(abpDomainTestAddress, "enable_mobile_sdk_token", "false"),
-					resource.TestCheckResourceAttr(abpDomainTestAddress, "filter_out_static_assets", "false"),
-					storedBooleans,
-				),
+				// `false` is a value of its own, not an omission.
+				Config: withValue("false"),
+				Check:  resource.ComposeAggregateTestCheckFunc(stateBooleans("false"), storedBooleans(false)),
 			},
-			{Config: withFalse, PlanOnly: true},
+			{Config: withValue("false"), PlanOnly: true},
 			{
-				// Removing them is planned as `-> null`, and stored as false.
+				Config: withValue("true"),
+				Check:  resource.ComposeAggregateTestCheckFunc(stateBooleans("true"), storedBooleans(true)),
+			},
+			{Config: withValue("true"), PlanOnly: true},
+			{
+				// Removing them clears what the API holds, and the cleared
+				// value reads back as the `false` Terraform has for it.
 				Config: withoutThem,
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(abpDomainTestAddress, "enable_mobile_sdk_token", "false"),
-					resource.TestCheckResourceAttr(abpDomainTestAddress, "filter_out_static_assets", "false"),
-					storedBooleans,
-				),
+				Check:  resource.ComposeAggregateTestCheckFunc(stateBooleans("false"), storedBooleans(nil)),
 			},
 			{Config: withoutThem, PlanOnly: true},
+		},
+	})
+}
+
+// Clearing a tri-state boolean outside Terraform is reported and corrected,
+// because the provider mirrors the API's absence of a value as `false`.
+func TestAbpDomain_ClearedBooleanIsRestored(t *testing.T) {
+	f := newAbpFake(t)
+	siteId := f.seedSite("cleared-boolean")
+	config := abpDomainConfig(siteId, `
+  cookiescope             = "cleared-boolean.example.com"
+  enable_mobile_sdk_token = true
+
+  criteria {
+    exact = "cleared-boolean.example.com"
+  }
+`)
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: f.providers(t),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					f.mutate(t, abpFakeDomains, abpAttrs(t, s, abpDomainTestAddress)["id"], func(doc map[string]any) {
+						delete(doc, "enable_mobile_sdk_token")
+					})
+					return nil
+				},
+				// The refresh of the next step sees the cleared value.
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config: config,
+				Check: func(s *terraform.State) error {
+					if value := abpDomainStored(t, f)["enable_mobile_sdk_token"]; value != true {
+						return fmt.Errorf("stored enable_mobile_sdk_token is %v, want it restored to true", value)
+					}
+					return nil
+				},
+			},
+			{Config: config, PlanOnly: true},
 		},
 	})
 }
