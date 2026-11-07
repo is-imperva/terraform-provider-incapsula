@@ -91,11 +91,18 @@ Running the ABP Tests
 
 The `incapsula_abp_*` resources and data sources have their own test suite, which
 needs neither credentials nor a server: every test runs against an in-memory stand-in
-for the ABP API. Run all of it with
+for the ABP API. Each test step still drives a real `terraform`, which makes the suite
+slow enough that it is skipped by default. Run all of it with
 
 ```sh
-go test ./incapsula/ -run TestAbp -count=1 -timeout 30m
+go test ./incapsula/ -run TestAbp -abp -count=1 -timeout 30m
 ```
+
+or `make test-abp`, which is the same command. Without `-abp` the tests that need
+`terraform` are reported as skipped, so a plain `go test ./incapsula/` stays quick.
+`ABP_TF_TESTS=1` in the environment has the same effect as `-abp`, which is handier in
+CI and in a shell that runs the suite repeatedly. The ABP tests that do not drive
+`terraform` always run.
 
 Add `-v` to see the individual test names.
 

@@ -9,10 +9,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -150,9 +152,29 @@ func newAbpFake(t *testing.T) *abpFake {
 	return f
 }
 
+// abpRunTerraformTests opts into the ABP tests that drive a real terraform
+// binary. They take minutes rather than seconds, so a plain `go test
+// ./incapsula` skips them and only `-abp` (or ABP_TF_TESTS=1, for CI and for
+// shells that keep it exported) runs them.
+var abpRunTerraformTests = flag.Bool("abp", false,
+	"run the ABP tests that drive the terraform CLI (same as ABP_TF_TESTS=1)")
+
+// requireTerraform skips the calling test unless the ABP terraform tests were
+// asked for.
+func requireTerraform(t *testing.T) {
+	t.Helper()
+	if !*abpRunTerraformTests && os.Getenv("ABP_TF_TESTS") == "" {
+		t.Skip("skipping ABP terraform test: pass -abp or set ABP_TF_TESTS=1 to run it")
+	}
+}
+
 // providers points the provider at the fake. The credentials are never
 // checked, but the provider insists on having some.
+//
+// Every test that drives terraform goes through here, which is what makes this
+// the one place the -abp gate has to be applied.
 func (f *abpFake) providers(t *testing.T) map[string]func() (*schema.Provider, error) {
+	requireTerraform(t)
 	t.Setenv("TF_ACC", "1")
 	t.Setenv("INCAPSULA_API_ID", "fake-id")
 	t.Setenv("INCAPSULA_API_KEY", "fake-key")
