@@ -52,8 +52,11 @@ server disagree, and removing one of them from the configuration is planned as
 ` + "`-> null`" + ` but stored as empty.
 
 ` + "`enable_mobile_sdk_token`" + ` and ` + "`filter_out_static_assets`" + ` have
-three states on the API — no value, ` + "`true`" + ` and ` + "`false`" + ` — and
-no value is not the same as ` + "`false`" + `: a Domain with no
+three states on the API — no value, ` + "`true`" + ` and ` + "`false`" + `.
+` + "`enable_mobile_sdk_token`" + ` is an ordinary boolean here, defaulting to
+` + "`false`" + `, so a Domain managed through this resource always has a value
+for it. ` + "`filter_out_static_assets`" + ` keeps the three states, because no
+value is not the same as ` + "`false`" + ` for it: a Domain with no
 ` + "`filter_out_static_assets`" + ` filters static assets. Terraform has only
 the two states, so writing ` + "`false`" + ` stores ` + "`false`" + `, removing
 the attribute clears the stored value, and a Domain with no value stored reads
@@ -144,9 +147,10 @@ back as ` + "`false`" + `.`,
 				Default:     true,
 			},
 			"enable_mobile_sdk_token": {
-				Description: "Enable to allow mobile SDK tokens. Only enable if you use the ABP mobile SDK with this domain. Omit it, or remove it, to leave the Domain with no value stored, which behaves as `false`.",
+				Description: "Enable to allow mobile SDK tokens. Only enable if you use the ABP mobile SDK with this domain. Defaults to `false`, and the value is always sent, so a Domain managed here is never left without one.",
 				Type:        schema.TypeBool,
 				Optional:    true,
+				Default:     false,
 			},
 			"filter_out_static_assets": {
 				Description: "CWAF only. Prevents common static asset paths from being analyzed by ABP. **Not applied on create** — the API ignores the value of a new Domain, and a Domain that has no value stored behaves as if filtering were enabled. `true` therefore takes effect only on a later update, which the first plan after the create asks for; `false` leaves filtering on, with nothing in the plan to show it.",
@@ -510,6 +514,7 @@ func extractAbpDomain(data *schema.ResourceData) (AbpDomain, error) {
 		LogRegion:             data.Get("log_region").(string),
 		CookieMode:            data.Get("cookie_mode").(string),
 		EnableMitigation:      data.Get("enable_mitigation").(bool),
+		EnableMobileSdkToken:  data.Get("enable_mobile_sdk_token").(bool),
 		AnalysisIpLookupMode:  extractAbpIpLookupMode(data.Get("analysis_ip_lookup_mode").([]any)),
 		ChallengeIpLookupMode: extractAbpIpLookupMode(data.Get("challenge_ip_lookup_mode").([]any)),
 		UnmaskedHeaders:       setToStringSlice(data.Get("unmasked_headers")),
@@ -533,15 +538,13 @@ func extractAbpDomain(data *schema.ResourceData) (AbpDomain, error) {
 		domain.EncryptionKeyId = &s
 	}
 	domain.FilterOutStaticAssets = abpConfiguredBool(data, "filter_out_static_assets")
-	domain.EnableMobileSdkToken = abpConfiguredBool(data, "enable_mobile_sdk_token")
 
 	return domain, nil
 }
 
-// abpConfiguredBool reads an optional boolean the way the API models it: three
-// states, where "no value at all" differs from `false` and is not necessarily
-// the same as it — a Domain with no `filter_out_static_assets` filters static
-// assets.
+// abpConfiguredBool reads `filter_out_static_assets` the way the API models
+// it: three states, where "no value at all" differs from `false` and is not
+// the same as it — a Domain with no value filters static assets.
 //
 // The value comes from the configuration rather than from the merged state,
 // because they disagree exactly where it matters: once `true` has been stored,
@@ -658,6 +661,9 @@ func serializeAbpDomain(data *schema.ResourceData, domain *AbpDomain) error {
 	if err := data.Set("enable_mitigation", domain.EnableMitigation); err != nil {
 		return err
 	}
+	if err := data.Set("enable_mobile_sdk_token", domain.EnableMobileSdkToken); err != nil {
+		return err
+	}
 	if err := data.Set("unmasked_headers", domain.UnmaskedHeaders); err != nil {
 		return err
 	}
@@ -696,15 +702,12 @@ func serializeAbpDomain(data *schema.ResourceData, domain *AbpDomain) error {
 			return err
 		}
 	}
-	// These two have three states on the API, which omits the field when a
-	// Domain has no value for it. Terraform has only two, so no value reads
-	// back as `false` — which is also what makes removing the attribute
-	// converge: the update clears the stored value, and the cleared value
-	// reads back as the absence the configuration now asks for.
+	// `filter_out_static_assets` has three states on the API, which omits the
+	// field when a Domain has no value for it. Terraform has only two, so no
+	// value reads back as `false` — which is also what makes removing the
+	// attribute converge: the update clears the stored value, and the cleared
+	// value reads back as the absence the configuration now asks for.
 	if err := data.Set("filter_out_static_assets", domain.FilterOutStaticAssets != nil && *domain.FilterOutStaticAssets); err != nil {
-		return err
-	}
-	if err := data.Set("enable_mobile_sdk_token", domain.EnableMobileSdkToken != nil && *domain.EnableMobileSdkToken); err != nil {
 		return err
 	}
 	if err := data.Set("created_at", domain.CreatedAt); err != nil {

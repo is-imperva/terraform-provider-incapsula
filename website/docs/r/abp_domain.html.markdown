@@ -24,8 +24,11 @@ description: |-
   server disagree, and removing one of them from the configuration is planned as
   -> null but stored as empty.
   enable_mobile_sdk_token and filter_out_static_assets have
-  three states on the API — no value, true and false — and
-  no value is not the same as false: a Domain with no
+  three states on the API — no value, true and false.
+  enable_mobile_sdk_token is an ordinary boolean here, defaulting to
+  false, so a Domain managed through this resource always has a value
+  for it. filter_out_static_assets keeps the three states, because no
+  value is not the same as false for it: a Domain with no
   filter_out_static_assets filters static assets. Terraform has only
   the two states, so writing false stores false, removing
   the attribute clears the stored value, and a Domain with no value stored reads
@@ -60,8 +63,11 @@ server disagree, and removing one of them from the configuration is planned as
 `-> null` but stored as empty.
 
 `enable_mobile_sdk_token` and `filter_out_static_assets` have
-three states on the API — no value, `true` and `false` — and
-no value is not the same as `false`: a Domain with no
+three states on the API — no value, `true` and `false`.
+`enable_mobile_sdk_token` is an ordinary boolean here, defaulting to
+`false`, so a Domain managed through this resource always has a value
+for it. `filter_out_static_assets` keeps the three states, because no
+value is not the same as `false` for it: a Domain with no
 `filter_out_static_assets` filters static assets. Terraform has only
 the two states, so writing `false` stores `false`, removing
 the attribute clears the stored value, and a Domain with no value stored reads
@@ -133,7 +139,7 @@ resource "incapsula_abp_domain" "test_com" {
 - `cookie_mode` (String) SameSite policy of the ABP cookies. One of: lax, legacy, none_secure, lax_and_none_secure, lax_and_legacy, legacy_and_none_secure. Defaults to `lax`.
 - `divert_host` (String) Domain or IP to which traffic is diverted when the `divert` Directive triggers. Requires traffic diversion to be enabled on the account; otherwise the API accepts the value, reports it as applied and then discards it.
 - `enable_mitigation` (Boolean) If false, all active Conditions are treated as monitor-only. If true (default), Conditions behave per their state.
-- `enable_mobile_sdk_token` (Boolean) Enable to allow mobile SDK tokens. Only enable if you use the ABP mobile SDK with this domain. Omit it, or remove it, to leave the Domain with no value stored, which behaves as `false`.
+- `enable_mobile_sdk_token` (Boolean) Enable to allow mobile SDK tokens. Only enable if you use the ABP mobile SDK with this domain. Defaults to `false`, and the value is always sent, so a Domain managed here is never left without one.
 - `encryption_key_id` (String) Existing encryption key to copy when creating this Domain. If unset, a copy of the account default key is used. Honoured on create only: the API consumes it once to clone the key material and never returns it, so later changes to it are ignored.
 - `filter_out_static_assets` (Boolean) CWAF only. Prevents common static asset paths from being analyzed by ABP. **Not applied on create** — the API ignores the value of a new Domain, and a Domain that has no value stored behaves as if filtering were enabled. `true` therefore takes effect only on a later update, which the first plan after the create asks for; `false` leaves filtering on, with nothing in the plan to show it.
 - `interstitial_inprogress_iframe_src` (String) URL of the iframe used to display the PoW challenge in progress. Must be an absolute URL with a scheme and an explicit path; write a bare origin with a trailing slash (`http://www.example.com/`).
